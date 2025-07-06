@@ -148,12 +148,12 @@ flowchart LR
     AC[⚡ Netz 230V] -->|300W| Bypass[🔄 AC-Bypass]
     AC -->|299W| Charger[🔋 Batterie-Lader]
     
-    Bypass -->|15W| ACOut[🔌 AC-Ausgang\n3D-Drucker 15W]
+    Bypass -->|15W| ACOut[🔌 AC-Ausgang 3D-Drucker 15W]
     
-    Charger -->|299W| Battery[🔋 Batterie\n2048Wh]
+    Charger -->|299W| Battery[🔋 Batterie 2048Wh]
     
-    Battery -.->|0W\n(aus)| DCOut[🔌 DC-Ausgang]
-    Battery -.->|0W\n(aus)| USBOut[🔌 USB-Ausgang]
+    Battery -.->|0W aus| DCOut[🔌 DC-Ausgang]
+    Battery -.->|0W aus| USBOut[🔌 USB-Ausgang]
     
     %% MQTT Register Mapping
     Charger -.->|totalInput=299W| MQTT1[📊 Batterie-Eingang]
@@ -183,13 +183,13 @@ flowchart LR
 ```mermaid
 flowchart LR
     Solar[☀️ Solar 400W] -->|400W| MPPT[⚙️ MPPT-Regler]
-    MPPT -->|380W| Battery[🔋 Batterie\n2048Wh]
+    MPPT -->|380W| Battery[🔋 Batterie 2048Wh]
     
     Battery -->|200W| Inverter[🔄 Inverter]
-    Battery -->|50W| DCOut[🔌 DC-Ausgang\n50W]
-    Battery -->|20W| USBOut[🔌 USB-Ausgang\n20W]
+    Battery -->|50W| DCOut[🔌 DC-Ausgang 50W]
+    Battery -->|20W| USBOut[🔌 USB-Ausgang 20W]
     
-    Inverter -->|180W| ACOut[🔌 AC-Ausgang\n180W]
+    Inverter -->|180W| ACOut[🔌 AC-Ausgang 180W]
     
     %% MQTT Register Mapping
     MPPT -.->|totalInput=380W| MQTT1[📊 Batterie-Eingang]
@@ -208,9 +208,9 @@ flowchart LR
 ```
 
 **Wichtige Erkenntnisse:**
-- ☀️ **Kein AC-Bypass**: Alle Ausgänge laufen über Batterie
+- ☀️ **Ohne Netz**: AC-Ausgang läuft über Inverter (nicht Bypass)
 - 📊 **Batterie-Eingang**: 380W = Solar-Input (minus MPPT-Verluste)
-- 📊 **Batterie-Ausgang**: 250W = AC+DC+USB kombiniert
+- 📊 **Batterie-Ausgang**: 250W = AC+DC+USB kombiniert über Inverter
 - 🔋 **Netto-Ladung**: +130W (380W rein, 250W raus)
 
 ### Stromausfall-Umschaltung (<8ms)
