@@ -14,8 +14,8 @@ Ein IP-Symcon Modul zur Überwachung und Steuerung von Fossibot Powerstations ü
 ### Monitoring
 - **Echtzeit-Daten** alle 2 Minuten automatisch aktualisiert
 - **Batteriezustand** (SOC) in Prozent
-- **Batterie-Eingang** (Solar/AC → Batterie)
-- **Batterie-Ausgang** (Batterie → DC/USB/Inverter)
+- **Gesamt-Eingang** (AC/Solar → F2400 System)
+- **Gesamt-Ausgang** (F2400 → AC/DC/USB)
 - **Output-Status** (AC/DC/USB Ausgänge An/Aus)
 - **Ladelimits** (Obere/Untere Grenzwerte)
 - **Ladestrom-Einstellungen**
@@ -69,8 +69,8 @@ Ein IP-Symcon Modul zur Überwachung und Steuerung von Fossibot Powerstations ü
 | Variable | Typ | Beschreibung | Einheit |
 |----------|-----|--------------|---------|
 | Ladezustand | Integer | Batterie-SOC | % |
-| Batterie-Eingang | Float | Solar/AC → Batterie | W |
-| Batterie-Ausgang | Float | Batterie → DC/USB/Inverter | W |
+| Gesamt-Eingang | Float | AC/Solar → F2400 System | W |
+| Gesamt-Ausgang | Float | F2400 → AC/DC/USB | W |
 | AC Ausgang | Boolean | AC-Ausgang Status | An/Aus |
 | DC Ausgang | Boolean | DC-Ausgang Status | An/Aus |
 | USB Ausgang | Boolean | USB-Ausgang Status | An/Aus |
@@ -118,65 +118,65 @@ Ein IP-Symcon Modul zur Überwachung und Steuerung von Fossibot Powerstations ü
 - **Gesamt**: bis **1600W kombiniert** bei Sonnenschein
 - **Ladezeit**: ca. 1,5h von 0% auf 80% bei vollem AC+Solar
 
-### UPS-Bypass-Verhalten (F2400)
+### MQTT-Messwerte-Verhalten (F2400)
 
-**Wichtiges Verhalten bei AC-Anschluss:**
-- **AC-Lasten** werden **direkt** vom Netz versorgt (Bypass)
-- **Batterie-Eingang** zeigt nur Strom **zur Batterie**
-- **Batterie-Ausgang** zeigt nur Strom **aus der Batterie** (DC/USB/Inverter bei Stromausfall)
-- **AC-Bypass-Strom erscheint NICHT** in den Messwerten
+**Wichtige Erkenntnis nach API-Analyse:**
+- **totalInput/totalOutput** messen das **komplette F2400-System**
+- **NICHT nur** Batterie-spezifische Ströme
+- **AC-Bypass wird mit gemessen** und in MQTT-Werten angezeigt
 
-**Beispiel bei angeschlossenem AC:**
+**Beispiel bei 100% SOC + AC-Anschluss:**
 ```
-Situation: 3D-Drucker 15W am AC-Ausgang, Batterie lädt mit 300W
-Batterie-Eingang: 300W (Netzstrom → Batterie)
-Batterie-Ausgang: 0W   (AC-Last läuft über Bypass)
-AC-Ausgang: On         (Bypass aktiv)
+Situation: 3D-Drucker 108W am AC-Ausgang, Batterie voll (100% SOC)
+Gesamt-Eingang: 108W (AC-Input ins F2400-System)
+Gesamt-Ausgang: 108W (AC-Output aus F2400-System)
+AC-Ausgang: On        (Bypass-Modus bei vollem Akku)
 ```
 
 **Bei Stromausfall:**
 - **Umschaltung in <8ms** auf Batteriebetrieb
-- **Batterie-Ausgang** zeigt dann die AC-Last
-- **Batterie-Eingang** wird 0W
+- **Gesamt-Ausgang** zeigt weiterhin die AC-Last (jetzt aus Batterie)
+- **Gesamt-Eingang** wird 0W (kein Netz-Input mehr)
 
 ## 🔌 Stromfluss-Diagramme (F2400)
 
-### Normal-Betrieb mit AC-Anschluss (UPS-Bypass)
+### Normal-Betrieb mit AC-Anschluss (UPS-Bypass bei 100% SOC)
 
-**Beispiel-Szenario:** 3D-Drucker am AC-Ausgang (100W), Drehregler auf 300W
+**Beispiel-Szenario:** 3D-Drucker am AC-Ausgang (108W), Batterie voll (100% SOC)
 
 ```mermaid
 flowchart LR
-    AC[⚡ Netz 230V] -->|400W gesamt| F2400[🏠 F2400 Powerstation]
+    AC[⚡ Netz 230V] -->|108W gesamt| F2400[🏠 F2400 Powerstation]
     
-    F2400 -->|100W Bypass| ACOut[🔌 AC-Ausgang 3D-Drucker 100W]
-    F2400 -->|300W| Battery[🔋 Batterie 2048Wh]
+    F2400 -->|108W AC-Bypass| ACOut[🔌 AC-Ausgang 3D-Drucker 108W]
+    F2400 -.->|0W| Battery[🔋 Batterie 2048Wh bei 100% SOC]
     
     Battery -.->|0W aus| DCOut[🔌 DC-Ausgang]
     Battery -.->|0W aus| USBOut[🔌 USB-Ausgang]
     
-    %% MQTT Messwerte
-    F2400 -.->|totalInput=300W| MQTT1[📊 Batterie-Eingang]
-    Battery -.->|totalOutput=0W| MQTT2[📊 Batterie-Ausgang]
+    %% MQTT Messwerte (Gesamt-System)
+    F2400 -.->|totalInput=108W| MQTT1[📊 Gesamt-Eingang]
+    F2400 -.->|totalOutput=108W| MQTT2[📊 Gesamt-Ausgang]
     
     %% Styling
     classDef power fill:#e1f5fe
     classDef device fill:#f3e5f5
     classDef mqtt fill:#e8f5e8
     classDef off fill:#ffebee,stroke-dasharray: 5 5
+    classDef bypass fill:#fff9c4
     
     class AC power
-    class F2400,ACOut,DCOut,USBOut,Battery device
-    class MQTT1,MQTT2 mqtt
+    class F2400,ACOut,Battery device
     class DCOut,USBOut off
+    class MQTT1,MQTT2 mqtt
 ```
 
 **Wichtige Erkenntnisse:**
-- 🏠 **F2400 verteilt**: 100W Bypass + 300W zur Batterie (Drehregler-begrenzt)
-- 🔄 **AC-Bypass**: Läuft direkt vom Netz, nicht durch die Batterie
-- 📊 **Batterie-Eingang**: 300W = Was zur Batterie fließt (MQTT totalInput)
-- 📊 **Batterie-Ausgang**: 0W = DC/USB aus (MQTT totalOutput)
-- ⚠️ **Bypass unsichtbar**: AC-Bypass-Verbrauch erscheint nicht in MQTT
+- 🔄 **AC-Bypass bei 100% SOC**: AC-Last läuft direkt vom Netz durch das F2400
+- 🔋 **Batterie inaktiv**: Bei vollem Akku fließt kein Strom zur/aus der Batterie
+- 📊 **Gesamt-Eingang**: 108W = Alles was ins F2400-System fließt (totalInput)
+- 📊 **Gesamt-Ausgang**: 108W = Alles was aus F2400-System raus geht (totalOutput)
+- ✅ **MQTT misst Gesamt-System**: Nicht nur Batterie, sondern kompletten Durchfluss
 
 ### Solar-Betrieb ohne Netz
 
@@ -189,9 +189,9 @@ flowchart LR
     F2400 -->|50W| DCOut[🔌 DC-Ausgang 50W]
     F2400 -->|20W| USBOut[🔌 USB-Ausgang 20W]
     
-    %% MQTT Messwerte
-    F2400 -.->|totalInput=380W| MQTT1[📊 Batterie-Eingang]
-    F2400 -.->|totalOutput=250W| MQTT2[📊 Batterie-Ausgang]
+    %% MQTT Messwerte (Gesamt-System)
+    F2400 -.->|totalInput=380W| MQTT1[📊 Gesamt-Eingang]
+    F2400 -.->|totalOutput=250W| MQTT2[📊 Gesamt-Ausgang]
     
     %% Styling
     classDef power fill:#fff3e0
@@ -204,10 +204,10 @@ flowchart LR
 ```
 
 **Wichtige Erkenntnisse:**
-- 🏠 **F2400 ohne Netz**: Alle Ausgänge laufen aus der Batterie (kein Bypass)
+- 🏠 **F2400 ohne Netz**: Alle Ausgänge laufen aus der Batterie (kein Bypass möglich)
 - ⚙️ **MPPT-Verluste**: 400W Solar → 380W nutzbar (5% Verlust)
-- 📊 **Batterie-Eingang**: 380W Solar-Input (MQTT totalInput)
-- 📊 **Batterie-Ausgang**: 250W = AC+DC+USB kombiniert (MQTT totalOutput)
+- 📊 **Gesamt-Eingang**: 380W Solar-Input ins F2400-System (totalInput)
+- 📊 **Gesamt-Ausgang**: 250W = AC+DC+USB kombiniert aus F2400 (totalOutput)
 - 🔋 **Netto-Ladung**: +130W (380W rein, 250W raus)
 
 ### Stromausfall-Umschaltung (<8ms)
@@ -244,32 +244,32 @@ sequenceDiagram
 
 ### MQTT-Register-Mapping
 
-Meine Interpretation:
+Korrigierte Interpretation nach API-Analyse:
 
 ```mermaid
 graph TB
     subgraph "📡 MQTT Register (Modbus)"
-        R6["Register 6<br/>totalInput<br/>(Batterie-Eingang)"]
-        R39["Register 39<br/>totalOutput<br/>(Batterie-Ausgang)"]
+        R6["Register 6<br/>totalInput<br/>(Gesamt-Eingang)"]
+        R39["Register 39<br/>totalOutput<br/>(Gesamt-Ausgang)"]
         R56["Register 56<br/>SOC<br/>(Ladezustand)"]
         R41["Register 41<br/>activeOutputList<br/>(AC/DC/USB Status)"]
     end
     
     subgraph "⚡ Physikalische Messungen"
-        BattIn["🔋 Strom zur Batterie<br/>Solar + AC-Überschuss"]
-        BattOut["🔋 Strom aus Batterie<br/>DC + USB + Inverter"]
+        SystemIn["🏠 Gesamt-Input ins F2400<br/>AC + Solar (inkl. Bypass)"]
+        SystemOut["🏠 Gesamt-Output aus F2400<br/>AC + DC + USB (inkl. Bypass)"]
         Outputs["🔌 Output-Status<br/>Bit-Maske"]
     end
     
     subgraph "📊 IP-Symcon Anzeige"
-        IPSIn["Batterie-Eingang<br/>(TotalInput)"]
-        IPSOut["Batterie-Ausgang<br/>(TotalOutput)"]
+        IPSIn["Gesamt-Eingang<br/>(TotalInput)"]
+        IPSOut["Gesamt-Ausgang<br/>(TotalOutput)"]
         IPSSOC["Ladezustand<br/>(BatterySOC)"]
         IPSOutputs["AC/DC/USB Ausgänge<br/>(Boolean-Schalter)"]
     end
     
-    R6 --> BattIn --> IPSIn
-    R39 --> BattOut --> IPSOut
+    R6 --> SystemIn --> IPSIn
+    R39 --> SystemOut --> IPSOut
     R56 --> IPSSOC
     R41 --> Outputs --> IPSOutputs
     
@@ -279,13 +279,13 @@ graph TB
     classDef ips fill:#e8f5e8
     
     class R6,R39,R56,R41 mqtt
-    class BattIn,BattOut,Outputs physical
+    class SystemIn,SystemOut,Outputs physical
     class IPSIn,IPSOut,IPSSOC,IPSOutputs ips
 ```
 
 **Wichtige MQTT-Register:**
-- **Register 6** (totalInput) = Batterie-Eingang [W]
-- **Register 39** (totalOutput) = Batterie-Ausgang [W]  
+- **Register 6** (totalInput) = Gesamt-Eingang ins F2400-System [W]
+- **Register 39** (totalOutput) = Gesamt-Ausgang aus F2400-System [W]  
 - **Register 56** (SOC) = Ladezustand [Promille → %]
 - **Register 41** (activeOutputList) = Output-Status [Bit-Maske]
 
