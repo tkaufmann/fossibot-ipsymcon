@@ -39,10 +39,13 @@ class FossibotDevice extends IPSModule
         $this->RegisterVariableFloat('ChargingStatus', 'Lade-Status', 'FBT.ChargingStatus', 130);
         $this->RegisterVariableFloat('DischargingStatus', 'Entlade-Status', 'FBT.DischargingStatus', 140);
 
-        // Ausgänge
+        // Ausgänge mit Webfront-Steuerung
         $this->RegisterVariableBoolean('ACOutput', 'AC Ausgang', '~Switch', 200);
+        $this->EnableAction('ACOutput');
         $this->RegisterVariableBoolean('DCOutput', 'DC Ausgang', '~Switch', 210);
+        $this->EnableAction('DCOutput');
         $this->RegisterVariableBoolean('USBOutput', 'USB Ausgang', '~Switch', 220);
+        $this->EnableAction('USBOutput');
 
         // Ladelimits mit Webfront-Steuerung
         $this->RegisterVariableInteger('ChargingLimit', 'Ladelimit', 'FBT.ChargingLimit', 300);
@@ -147,6 +150,15 @@ class FossibotDevice extends IPSModule
                 break;
             case 'MaxChargingCurrent':
                 $this->FBT_SetMaxChargingCurrent($Value);
+                break;
+            case 'ACOutput':
+                $this->FBT_SetACOutput($Value);
+                break;
+            case 'DCOutput':
+                $this->FBT_SetDCOutput($Value);
+                break;
+            case 'USBOutput':
+                $this->FBT_SetUSBOutput($Value);
                 break;
             default:
                 parent::RequestAction($Ident, $Value);
