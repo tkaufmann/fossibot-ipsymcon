@@ -471,8 +471,10 @@ class FossibotDevice extends IPSModule
                 $valueText = $value !== null ? "($value)" : "";
                 $this->LogMessage("✅ $command$valueText erfolgreich gesendet", KL_NOTIFY);
                 
-                // Nach Befehl kurz warten und Status aktualisieren
-                sleep(2);
+                // Nach Befehl länger warten, damit Gerät Zeit hat zu reagieren
+                $this->LogMessage("Warte 5 Sekunden auf Geräte-Reaktion...", KL_NOTIFY);
+                sleep(5);
+                $this->LogMessage("Aktualisiere Status nach Befehl...", KL_NOTIFY);
                 $this->FBT_UpdateDeviceStatus();
             } else {
                 $valueText = $value !== null ? "($value)" : "";
