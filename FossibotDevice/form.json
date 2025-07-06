@@ -1,0 +1,169 @@
+{
+    "elements": [
+        {
+            "type": "Label",
+            "caption": "Fossibot Gerät Konfiguration"
+        },
+        {
+            "type": "ValidationTextBox",
+            "name": "DeviceID",
+            "caption": "Geräte-ID"
+        },
+        {
+            "type": "Label",
+            "caption": "Zugangsdaten werden automatisch von der Discovery-Instanz übernommen."
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "UpdateInterval",
+            "caption": "Aktualisierungsintervall",
+            "suffix": "Sekunden",
+            "minimum": 60,
+            "maximum": 3600
+        },
+        {
+            "type": "Label",
+            "caption": "Das Gerät wird automatisch in dem angegebenen Intervall aktualisiert."
+        },
+        {
+            "type": "Label",
+            "caption": "⚠️ Wichtig: Häufige Updates können zum Logout aus der Fossibot App führen!"
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "caption": "Jetzt aktualisieren",
+            "onClick": "IPS_RequestAction($id, 'RefreshNow', true);"
+        },
+        {
+            "type": "Button", 
+            "caption": "Geräteinformationen",
+            "onClick": "IPS_RequestAction($id, 'GetDeviceInfo', true);"
+        },
+        {
+            "type": "Label",
+            "caption": "🔌 AC-Ausgang"
+        },
+        {
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "Button",
+                    "caption": "AC Ein",
+                    "onClick": "IPS_RequestAction($id, 'SetACOutput', true);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "AC Aus",
+                    "onClick": "IPS_RequestAction($id, 'SetACOutput', false);"
+                }
+            ]
+        },
+        {
+            "type": "Label",
+            "caption": "🔌 DC-Ausgang"
+        },
+        {
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "Button",
+                    "caption": "DC Ein",
+                    "onClick": "IPS_RequestAction($id, 'SetDCOutput', true);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "DC Aus",
+                    "onClick": "IPS_RequestAction($id, 'SetDCOutput', false);"
+                }
+            ]
+        },
+        {
+            "type": "Label",
+            "caption": "🔌 USB-Ausgang"
+        },
+        {
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "Button",
+                    "caption": "USB Ein",
+                    "onClick": "IPS_RequestAction($id, 'SetUSBOutput', true);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "USB Aus",
+                    "onClick": "IPS_RequestAction($id, 'SetUSBOutput', false);"
+                }
+            ]
+        },
+        {
+            "type": "Label",
+            "caption": "🔋 Ladestrom (Ampere)"
+        },
+        {
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "Button",
+                    "caption": "1A",
+                    "onClick": "IPS_RequestAction($id, 'SetMaxChargingCurrent', 1);"
+                },
+                {
+                    "type": "Button", 
+                    "caption": "5A",
+                    "onClick": "IPS_RequestAction($id, 'SetMaxChargingCurrent', 5);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "10A",
+                    "onClick": "IPS_RequestAction($id, 'SetMaxChargingCurrent', 10);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "15A", 
+                    "onClick": "IPS_RequestAction($id, 'SetMaxChargingCurrent', 15);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "20A",
+                    "onClick": "IPS_RequestAction($id, 'SetMaxChargingCurrent', 20);"
+                }
+            ]
+        },
+        {
+            "type": "Label",
+            "caption": "⚡ Ladelimit (Prozent)"
+        },
+        {
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "Button",
+                    "caption": "80%",
+                    "onClick": "IPS_RequestAction($id, 'SetChargingLimit', 80);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "90%",
+                    "onClick": "IPS_RequestAction($id, 'SetChargingLimit', 90);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "100%",
+                    "onClick": "IPS_RequestAction($id, 'SetChargingLimit', 100);"
+                }
+            ]
+        },
+        {
+            "type": "Label",
+            "caption": "⚙️ Erweiterte Funktionen"
+        },
+        {
+            "type": "Button",
+            "caption": "Einstellungen anfordern",
+            "onClick": "IPS_RequestAction($id, 'RequestSettings', true);"
+        }
+    ]
+}

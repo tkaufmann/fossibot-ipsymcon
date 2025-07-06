@@ -1,0 +1,12 @@
+{
+    "id": "{58C595CB-5ABE-95CA-C1BC-26C5DBA45460}",
+    "name": "FossibotDevice",
+    "type": 3,
+    "vendor": "Fossibot",
+    "aliases": ["Fossibot F2400", "Fossibot F3600", "Generic Powerstation"],
+    "url": "https://github.com/tim/fossibot",
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "FBT"
+}

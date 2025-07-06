@@ -1,0 +1,47 @@
+# IP-Symcon spezifische Dateien
+*.log
+*.tmp
+.token_cache*
+
+# PHP spezifische Dateien
+config.local.php
+vendor/
+composer.lock
+
+# IDE/Editor Dateien
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Betriebssystem Dateien
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Backup und temporäre Dateien
+*.bak
+*.backup
+*.old
+*.orig
+
+# Cache und temporäre Verzeichnisse
+cache/
+temp/
+tmp/
+
+# Logs und Debug-Dateien
+debug.log
+error.log
+*.debug
+
+# Symcon Module spezifische Ignores
+modules/
+data/
+scripts/
+
+# Test und Entwicklung
+test-output/
+coverage/
+phpunit.xml.local

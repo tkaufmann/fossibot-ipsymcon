@@ -1,0 +1,12 @@
+{
+    "id": "{A67EA473-8B4A-0901-E134-21F1363D9036}",
+    "name": "FossibotDiscovery",
+    "type": 4,
+    "vendor": "Fossibot",
+    "aliases": ["Fossibot Konfigurator", "Fossibot Discovery"],
+    "url": "https://github.com/tim/fossibot",
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "FBD"
+}

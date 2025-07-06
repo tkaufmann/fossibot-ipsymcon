@@ -1,0 +1,41 @@
+{
+    "elements": [
+        {
+            "type": "Label",
+            "caption": "Fossibot Geräte-Konfigurator"
+        },
+        {
+            "type": "ValidationTextBox",
+            "name": "Email",
+            "caption": "E-Mail-Adresse"
+        },
+        {
+            "type": "PasswordTextBox",
+            "name": "Password",
+            "caption": "Passwort"
+        },
+        {
+            "type": "Label",
+            "caption": "1. Zugangsdaten eingeben und speichern"
+        },
+        {
+            "type": "Label",
+            "caption": "2. 'Geräte suchen' klicken"
+        },
+        {
+            "type": "Label",
+            "caption": "3. Für jedes Gerät manuell eine 'FossibotDevice' Instanz erstellen"
+        },
+        {
+            "type": "Label",
+            "caption": "4. In der Device-Instanz die gefundene Geräte-ID eintragen"
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "caption": "Geräte suchen",
+            "onClick": "IPS_RequestAction($id, 'DiscoverDevices', true);"
+        }
+    ]
+}
