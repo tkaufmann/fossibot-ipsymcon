@@ -30,7 +30,13 @@ class FossibotDevice extends IPSModule
         $this->CreateChargingCurrentProfile();
 
         // THEN: Register variables with profiles
-        // === STATUS & ÜBERSICHT (100-199) ===
+        // Kategorien für Gruppierung erstellen
+        $statusCat = $this->RegisterCategoryByPosition('Status', 100);
+        $outputsCat = $this->RegisterCategoryByPosition('Ausgänge', 200);
+        $paramsCat = $this->RegisterCategoryByPosition('Parameter', 300);
+        $systemCat = $this->RegisterCategoryByPosition('System', 900);
+        
+        // === STATUS & ÜBERSICHT ===
         // Force-Update der Labels durch Neuerstellung
         @$this->UnregisterVariable('TotalInput');
         @$this->UnregisterVariable('TotalOutput');
@@ -729,6 +735,22 @@ class FossibotDevice extends IPSModule
         IPS_SetVariableProfileAssociation($profileName, 3, '3', '', 0x80FF00);
         IPS_SetVariableProfileAssociation($profileName, 4, '4', '', 0xFFFF00);
         IPS_SetVariableProfileAssociation($profileName, 5, '5', '', 0xFF8000);
+    }
+
+    /**
+     * Hilfsfunktion: Kategorie an bestimmter Position registrieren
+     */
+    private function RegisterCategoryByPosition($name, $position)
+    {
+        $categoryID = @IPS_GetObjectIDByIdent($name, $this->InstanceID);
+        if ($categoryID === false) {
+            $categoryID = IPS_CreateCategory();
+            IPS_SetIdent($categoryID, $name);
+            IPS_SetName($categoryID, $name);
+            IPS_SetParent($categoryID, $this->InstanceID);
+        }
+        IPS_SetPosition($categoryID, $position);
+        return $categoryID;
     }
 
     /**
