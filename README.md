@@ -31,7 +31,7 @@ Ein IP-Symcon Modul zur Überwachung und Steuerung von Fossibot Powerstations ü
 - **AC/DC/USB Ausgänge** - Ein-/Ausschalten über Buttons oder Skripte
 - **Ladestrom-Steuerung** - 1A bis 20A in 5 Stufen (1A, 5A, 10A, 15A, 20A)
 - **Ladelimit-Steuerung** - 60-100% in 5%-Schritten (9 Buttons)
-- **Entladelimit-Steuerung** - 5-50% in 5%-Schritten (10 Buttons)
+- **Entladelimit-Steuerung** - 0-50% in 5%-Schritten (11 Buttons)
 - **Erweiterte Funktionen** - Einstellungen anfordern und Status aktualisieren
 
 ### Integration
@@ -94,7 +94,7 @@ Ein IP-Symcon Modul zur Überwachung und Steuerung von Fossibot Powerstations ü
 - **AC/DC/USB Ein/Aus** - Direkte Ausgänge-Steuerung
 - **Ladestrom** - 1A, 5A, 10A, 15A, 20A Buttons in einer Reihe
 - **Ladelimit** - 60%, 65%, 70%, 75%, 80%, 85%, 90%, 95%, 100% Buttons
-- **Entladelimit** - 5%, 10%, 15%, 20%, 25%, 30%, 35%, 40%, 45%, 50% Buttons
+- **Entladelimit** - 0%, 5%, 10%, 15%, 20%, 25%, 30%, 35%, 40%, 45%, 50% Buttons
 - **"Jetzt aktualisieren"** - Sofortige Datenabfrage
 - **"Geräteinformationen"** - Debug-Informationen
 - **"Einstellungen anfordern"** - Aktuelle Geräteeinstellungen abrufen
@@ -175,7 +175,8 @@ FBT_SetChargingLimit($fossibotID, 80);   // Ladelimit: 80% (60-100%)
 FBT_SetChargingLimit($fossibotID, 90);   // Ladelimit: 90%
 FBT_SetChargingLimit($fossibotID, 100);  // Ladelimit: 100%
 
-FBT_SetDischargeLimit($fossibotID, 20);  // Entladelimit: 20% (5-50%)
+FBT_SetDischargeLimit($fossibotID, 0);   // Entladelimit: 0% (0-50%)
+FBT_SetDischargeLimit($fossibotID, 20);  // Entladelimit: 20%
 FBT_SetDischargeLimit($fossibotID, 30);  // Entladelimit: 30%
 
 FBT_SetChargeTimer($fossibotID, 60);     // Lade-Timer: 60 Minuten
@@ -263,7 +264,12 @@ $fossibotID = $instances[0]; // Erste gefundene Instanz
 
 ## 🔄 Changelog
 
-### v1.4 - Aktuell  
+### v1.5 - Aktuell  
+- ✅ **Entladelimit 0% freigegeben** - Vollständige Kontrolle 0-50%
+- ✅ **11 Entladelimit-Buttons** - 0%, 5%, 10%, 15%, 20%, 25%, 30%, 35%, 40%, 45%, 50%
+- ✅ **Herstellerschutz vertraut** - 0% erlaubt, da Hersteller Tiefentladeschutz hat
+
+### v1.4
 - ✅ **App-konforme Limits** - Ladelimit 60-100%, Entladelimit 5-50%
 - ✅ **Erweiterte Button-Arrays** - 9 Ladelimit + 10 Entladelimit Buttons
 - ✅ **Validierung angepasst** - Sichere Bereiche wie in Fossibot App

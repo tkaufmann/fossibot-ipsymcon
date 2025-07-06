@@ -355,12 +355,12 @@ class FossibotDevice extends IPSModule
     }
 
     /**
-     * Entladelimit setzen (5-50%)
+     * Entladelimit setzen (0-50%)
      */
     public function FBT_SetDischargeLimit(int $percent)
     {
-        if ($percent < 5 || $percent > 50) {
-            $this->LogMessage('Entladelimit muss zwischen 5-50% liegen', KL_ERROR);
+        if ($percent < 0 || $percent > 50) {
+            $this->LogMessage('Entladelimit muss zwischen 0-50% liegen', KL_ERROR);
             return false;
         }
         

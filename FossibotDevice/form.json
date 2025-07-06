@@ -188,11 +188,16 @@
         },
         {
             "type": "Label",
-            "caption": "🔋 Entladelimit (5-50%)"
+            "caption": "🔋 Entladelimit (0-50%)"
         },
         {
             "type": "RowLayout",
             "items": [
+                {
+                    "type": "Button",
+                    "caption": "0%",
+                    "onClick": "IPS_RequestAction($id, 'SetDischargeLimit', 0);"
+                },
                 {
                     "type": "Button",
                     "caption": "5%",
