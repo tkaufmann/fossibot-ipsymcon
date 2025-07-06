@@ -478,8 +478,8 @@ class FossibotDevice extends IPSModule
                 $this->LogMessage("✅ $command$valueText - Gerät hat geantwortet", KL_NOTIFY);
                 $this->SetValue('ConnectionStatus', 'Online');
                 
-                // Kurz warten damit Status-Update verarbeitet wird
-                $client->listenForUpdates(0.5);
+                // Länger warten damit ALLE Status-Updates verarbeitet werden
+                $client->listenForUpdates(2.0);
                 
                 // Jetzt sollten die neuen Werte da sein
                 $status = $client->getDeviceStatus($deviceId);
