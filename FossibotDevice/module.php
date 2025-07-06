@@ -17,6 +17,11 @@ class FossibotDevice extends IPSModule
         // Custom Profile für Lade-/Entlade-Status erstellen
         $this->CreateChargingStatusProfile();
         $this->CreateDischargingStatusProfile();
+        
+        // Custom Profile für Webfront-Steuerung erstellen
+        $this->CreateChargingLimitProfile();
+        $this->CreateDischargeLimitProfile();
+        $this->CreateChargingCurrentProfile();
 
         // Energie-Variablen
         $this->RegisterVariableInteger('BatterySOC', 'Ladezustand', '~Battery.100', 100);
@@ -32,10 +37,13 @@ class FossibotDevice extends IPSModule
         $this->RegisterVariableBoolean('DCOutput', 'DC Ausgang', '~Switch', 210);
         $this->RegisterVariableBoolean('USBOutput', 'USB Ausgang', '~Switch', 220);
 
-        // Ladelimits
-        $this->RegisterVariableInteger('ChargingLimit', 'Ladelimit', '~Battery.100', 300);
-        $this->RegisterVariableInteger('DischargeLimit', 'Entladelimit', '~Battery.100', 310);
-        $this->RegisterVariableInteger('MaxChargingCurrent', 'Max. Ladestrom', '', 320);
+        // Ladelimits mit Webfront-Steuerung
+        $this->RegisterVariableInteger('ChargingLimit', 'Ladelimit', 'FBT.ChargingLimit', 300);
+        $this->EnableAction('ChargingLimit');
+        $this->RegisterVariableInteger('DischargeLimit', 'Entladelimit', 'FBT.DischargeLimit', 310);
+        $this->EnableAction('DischargeLimit');
+        $this->RegisterVariableInteger('MaxChargingCurrent', 'Max. Ladestrom', 'FBT.ChargingCurrent', 320);
+        $this->EnableAction('MaxChargingCurrent');
 
         // Systemstatus
         $this->RegisterVariableInteger('LastUpdate', 'Letzte Aktualisierung', '~UnixTimestamp', 400);
@@ -117,6 +125,15 @@ class FossibotDevice extends IPSModule
                 break;
             case 'ClearTokenCache':
                 $this->FBT_ClearTokenCache();
+                break;
+            case 'ChargingLimit':
+                $this->FBT_SetChargingLimit($Value);
+                break;
+            case 'DischargeLimit':
+                $this->FBT_SetDischargeLimit($Value);
+                break;
+            case 'MaxChargingCurrent':
+                $this->FBT_SetMaxChargingCurrent($Value);
                 break;
             default:
                 parent::RequestAction($Ident, $Value);
@@ -562,6 +579,57 @@ class FossibotDevice extends IPSModule
             IPS_SetVariableProfileText($profileName, '', 'W');
             IPS_SetVariableProfileDigits($profileName, 1);
             IPS_SetVariableProfileIcon($profileName, 'Electricity');
+        }
+    }
+
+    /**
+     * Erstellt Custom Profile für Ladelimit-Slider (60-100%)
+     */
+    private function CreateChargingLimitProfile()
+    {
+        $profileName = 'FBT.ChargingLimit';
+        
+        if (!IPS_VariableProfileExists($profileName)) {
+            IPS_CreateVariableProfile($profileName, 1); // 1 = Integer
+            IPS_SetVariableProfileText($profileName, '', '%');
+            IPS_SetVariableProfileValues($profileName, 60, 100, 5); // Min, Max, Step
+            IPS_SetVariableProfileIcon($profileName, 'Battery');
+        }
+    }
+
+    /**
+     * Erstellt Custom Profile für Entladelimit-Slider (0-50%)
+     */
+    private function CreateDischargeLimitProfile()
+    {
+        $profileName = 'FBT.DischargeLimit';
+        
+        if (!IPS_VariableProfileExists($profileName)) {
+            IPS_CreateVariableProfile($profileName, 1); // 1 = Integer
+            IPS_SetVariableProfileText($profileName, '', '%');
+            IPS_SetVariableProfileValues($profileName, 0, 50, 5); // Min, Max, Step
+            IPS_SetVariableProfileIcon($profileName, 'Battery');
+        }
+    }
+
+    /**
+     * Erstellt Custom Profile für Ladestrom-Dropdown (1,5,10,15,20A)
+     */
+    private function CreateChargingCurrentProfile()
+    {
+        $profileName = 'FBT.ChargingCurrent';
+        
+        if (!IPS_VariableProfileExists($profileName)) {
+            IPS_CreateVariableProfile($profileName, 1); // 1 = Integer
+            IPS_SetVariableProfileText($profileName, '', 'A');
+            IPS_SetVariableProfileIcon($profileName, 'Electricity');
+            
+            // Dropdown-Werte definieren
+            IPS_SetVariableProfileAssociation($profileName, 1, '1A', '', 0x00FF00);
+            IPS_SetVariableProfileAssociation($profileName, 5, '5A', '', 0x00FF00);
+            IPS_SetVariableProfileAssociation($profileName, 10, '10A', '', 0x00FF00);
+            IPS_SetVariableProfileAssociation($profileName, 15, '15A', '', 0xFFFF00);
+            IPS_SetVariableProfileAssociation($profileName, 20, '20A', '', 0xFF0000);
         }
     }
 
