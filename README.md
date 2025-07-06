@@ -29,7 +29,7 @@ Ein IP-Symcon Modul zur Überwachung und Steuerung von Fossibot Powerstations ü
 
 ### Steuerung
 - **AC/DC/USB Ausgänge** - Ein-/Ausschalten über Buttons oder Skripte
-- **Ladestrom-Steuerung** - 1A bis 20A in 5 Stufen (1A, 5A, 10A, 15A, 20A)
+- **Ladestrom-Steuerung** - 1A bis 5A in 1A-Schritten (optimiert für F2400)
 - **Ladelimit-Steuerung** - 60-100% in 5%-Schritten (9 Buttons)
 - **Entladelimit-Steuerung** - 0-50% in 5%-Schritten (11 Buttons)
 - **Erweiterte Funktionen** - Einstellungen anfordern und Status aktualisieren
@@ -90,9 +90,37 @@ Ein IP-Symcon Modul zur Überwachung und Steuerung von Fossibot Powerstations ü
 
 ⚠️ **Wichtiger Hinweis**: Häufige API-Aufrufe können dazu führen, dass du aus der Fossibot Mobile App ausgeloggt wirst, da nur eine aktive Session pro Account erlaubt ist.
 
+### Ladestrom-Konfiguration (F2400)
+
+**Warum nur 1-5A statt 1-20A?**
+- Das **F2400 kann maximal 1100W AC** aufnehmen
+- **5A × 230V = 1150W** entspricht bereits dem Maximum
+- Werte über 5A bringen **keine höhere Ladeleistung**
+- Die Skala wurde **optimiert für echte F2400-Nutzung**
+
+**Praktische Werte:**
+- **1A** = 230W (Schonladung, schwache Sicherungen)
+- **2A** = 460W (Langsame Ladung)
+- **3A** = 690W (Normale Ladung)
+- **4A** = 920W (Schnelle Ladung)
+- **5A** = 1150W (Maximum für F2400)
+
+### Drehregler am F2400
+
+**Empfohlene Einstellung:**
+- **Drehregler auf Maximum** (1100W) stellen
+- **Steuerung komplett über IP-Symcon** (1-5A)
+- **Vorteil**: Fernsteuerung und Automatisierung möglich
+
+**Kombinierte AC + Solar Ladung:**
+- **AC**: bis 1100W (gesteuert über IP-Symcon 1-5A)
+- **Solar**: bis 500W (automatisch, je nach Verfügbarkeit)
+- **Gesamt**: bis **1600W kombiniert** bei Sonnenschein
+- **Ladezeit**: ca. 1,5h von 0% auf 80% bei vollem AC+Solar
+
 ### Steuerung über Buttons
 - **AC/DC/USB Ein/Aus** - Direkte Ausgänge-Steuerung
-- **Ladestrom** - 1A, 5A, 10A, 15A, 20A Buttons in einer Reihe
+- **Ladestrom** - 1A, 2A, 3A, 4A, 5A Buttons (angepasst für F2400)
 - **Ladelimit** - 60%, 65%, 70%, 75%, 80%, 85%, 90%, 95%, 100% Buttons
 - **Entladelimit** - 0%, 5%, 10%, 15%, 20%, 25%, 30%, 35%, 40%, 45%, 50% Buttons
 - **"Jetzt aktualisieren"** - Sofortige Datenabfrage
@@ -164,12 +192,12 @@ FBT_SetDCOutput($fossibotID, false);  // DC-Ausgang ausschalten
 FBT_SetUSBOutput($fossibotID, true);  // USB-Ausgang einschalten
 FBT_SetUSBOutput($fossibotID, false); // USB-Ausgang ausschalten
 
-// === LADEPARAMETER ===
-FBT_SetMaxChargingCurrent($fossibotID, 1);   // Ladestrom: 1A (minimal)
-FBT_SetMaxChargingCurrent($fossibotID, 5);   // Ladestrom: 5A
-FBT_SetMaxChargingCurrent($fossibotID, 10);  // Ladestrom: 10A (normal)
-FBT_SetMaxChargingCurrent($fossibotID, 15);  // Ladestrom: 15A  
-FBT_SetMaxChargingCurrent($fossibotID, 20);  // Ladestrom: 20A (maximum)
+// === LADEPARAMETER (F2400: 1-5A) ===
+FBT_SetMaxChargingCurrent($fossibotID, 1);   // Ladestrom: 1A (230W - minimal)
+FBT_SetMaxChargingCurrent($fossibotID, 2);   // Ladestrom: 2A (460W - langsam)
+FBT_SetMaxChargingCurrent($fossibotID, 3);   // Ladestrom: 3A (690W - normal)
+FBT_SetMaxChargingCurrent($fossibotID, 4);   // Ladestrom: 4A (920W - schnell)
+FBT_SetMaxChargingCurrent($fossibotID, 5);   // Ladestrom: 5A (1150W - maximum für F2400)
 
 FBT_SetChargingLimit($fossibotID, 80);   // Ladelimit: 80% (60-100%)
 FBT_SetChargingLimit($fossibotID, 90);   // Ladelimit: 90%
@@ -204,11 +232,15 @@ FBT_SetChargingLimit($fossibotID, 100);
 
 **Solar-Überschuss-Steuerung:**
 ```php
-// Bei hoher PV-Leistung: Vollgas laden
+// Bei hoher PV-Leistung: Vollgas laden (F2400)
 $pvPower = GetValue($pvInstanceID);
 if ($pvPower > 1000) {
-    FBT_SetMaxChargingCurrent($fossibotID, 20);
+    FBT_SetMaxChargingCurrent($fossibotID, 5);  // Maximum für F2400
     FBT_SetChargingLimit($fossibotID, 100);
+} elseif ($pvPower > 500) {
+    FBT_SetMaxChargingCurrent($fossibotID, 3);  // Moderate Ladung
+} else {
+    FBT_SetMaxChargingCurrent($fossibotID, 1);  // Eco-Modus
 }
 ```
 
@@ -218,8 +250,8 @@ if ($pvPower > 1000) {
 $soc = GetValue(IPS_GetObjectIDByIdent('BatterySOC', $fossibotID));
 
 if ($soc < 20) {
-    // Notladung aktivieren
-    FBT_SetMaxChargingCurrent($fossibotID, 20);
+    // Notladung aktivieren (F2400)
+    FBT_SetMaxChargingCurrent($fossibotID, 5);  // Maximum für F2400
     FBT_SetChargingLimit($fossibotID, 100);
 } elseif ($soc > 95) {
     // Erhaltungsladung
@@ -229,11 +261,11 @@ if ($soc < 20) {
 
 **Strompreis-Optimierung:**
 ```php
-// Bei niedrigen Strompreisen (z.B. nachts)
+// Bei niedrigen Strompreisen (z.B. nachts) - F2400
 if ($strompreis < 0.20) {
-    FBT_SetMaxChargingCurrent($fossibotID, 15);
+    FBT_SetMaxChargingCurrent($fossibotID, 5);  // Maximum für F2400
 } else {
-    FBT_SetMaxChargingCurrent($fossibotID, 1);
+    FBT_SetMaxChargingCurrent($fossibotID, 1);  // Eco-Modus
 }
 ```
 
@@ -264,7 +296,14 @@ $fossibotID = $instances[0]; // Erste gefundene Instanz
 
 ## 🔄 Changelog
 
-### v1.5 - Aktuell  
+### v1.6 - Aktuell
+- ✅ **F2400-optimierte Ladestrom-Skala** - 1-5A statt 1-20A (da F2400 max 1100W AC)
+- ✅ **Vollständige Webfront-Steuerung** - Slider für Limits, Dropdown für Ladestrom
+- ✅ **Kombinierte AC+Solar Dokumentation** - bis 1600W Gesamtladeleistung
+- ✅ **Drehregler-Empfehlungen** - Optimale Konfiguration für IP-Symcon Steuerung
+- ✅ **Stille MQTT-Kommunikation** - Keine störenden Debug-Meldungen mehr
+
+### v1.5
 - ✅ **Entladelimit 0% freigegeben** - Vollständige Kontrolle 0-50%
 - ✅ **11 Entladelimit-Buttons** - 0%, 5%, 10%, 15%, 20%, 25%, 30%, 35%, 40%, 45%, 50%
 - ✅ **Erweiterte Entlade-Kontrolle** - Komplette Bandbreite verfügbar

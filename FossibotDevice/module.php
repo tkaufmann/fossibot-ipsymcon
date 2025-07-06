@@ -66,7 +66,7 @@ class FossibotDevice extends IPSModule
         $this->EnableAction('MaxChargingCurrent');
         // Standardwert setzen falls Variable leer
         if ($this->GetValue('MaxChargingCurrent') == 0) {
-            $this->SetValue('MaxChargingCurrent', 10);
+            $this->SetValue('MaxChargingCurrent', 3); // 3A = 690W (moderate Ladung)
         }
 
         // Systemstatus
@@ -423,12 +423,12 @@ class FossibotDevice extends IPSModule
     }
 
     /**
-     * Maximalen Ladestrom setzen (1-20A)
+     * Maximalen Ladestrom setzen (1-5A für F2400)
      */
     public function FBT_SetMaxChargingCurrent(int $ampere)
     {
-        if ($ampere < 1 || $ampere > 20) {
-            $this->LogMessage('Ladestrom muss zwischen 1-20A liegen', KL_ERROR);
+        if ($ampere < 1 || $ampere > 5) {
+            $this->LogMessage('Ladestrom muss zwischen 1-5A liegen (F2400 max 1100W AC)', KL_ERROR);
             return false;
         }
         
@@ -719,12 +719,12 @@ class FossibotDevice extends IPSModule
         IPS_SetVariableProfileText($profileName, '', 'A');
         IPS_SetVariableProfileIcon($profileName, 'Electricity');
         
-        // Dropdown-Werte definieren (ohne A in Text)
+        // Dropdown-Werte für F2400 (1-5A, da max 1100W AC)
         IPS_SetVariableProfileAssociation($profileName, 1, '1', '', 0x00FF00);
-        IPS_SetVariableProfileAssociation($profileName, 5, '5', '', 0x00FF00);
-        IPS_SetVariableProfileAssociation($profileName, 10, '10', '', 0x00FF00);
-        IPS_SetVariableProfileAssociation($profileName, 15, '15', '', 0xFFFF00);
-        IPS_SetVariableProfileAssociation($profileName, 20, '20', '', 0xFF0000);
+        IPS_SetVariableProfileAssociation($profileName, 2, '2', '', 0x40FF00);
+        IPS_SetVariableProfileAssociation($profileName, 3, '3', '', 0x80FF00);
+        IPS_SetVariableProfileAssociation($profileName, 4, '4', '', 0xFFFF00);
+        IPS_SetVariableProfileAssociation($profileName, 5, '5', '', 0xFF8000);
     }
 
     /**

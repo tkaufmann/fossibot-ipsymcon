@@ -108,7 +108,7 @@
         },
         {
             "type": "Label",
-            "caption": "🔋 Ladestrom (Ampere)"
+            "caption": "🔋 Ladestrom (1-5A für F2400)"
         },
         {
             "type": "RowLayout",
@@ -120,23 +120,23 @@
                 },
                 {
                     "type": "Button", 
+                    "caption": "2A",
+                    "onClick": "IPS_RequestAction($id, 'SetMaxChargingCurrent', 2);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "3A",
+                    "onClick": "IPS_RequestAction($id, 'SetMaxChargingCurrent', 3);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "4A", 
+                    "onClick": "IPS_RequestAction($id, 'SetMaxChargingCurrent', 4);"
+                },
+                {
+                    "type": "Button",
                     "caption": "5A",
                     "onClick": "IPS_RequestAction($id, 'SetMaxChargingCurrent', 5);"
-                },
-                {
-                    "type": "Button",
-                    "caption": "10A",
-                    "onClick": "IPS_RequestAction($id, 'SetMaxChargingCurrent', 10);"
-                },
-                {
-                    "type": "Button",
-                    "caption": "15A", 
-                    "onClick": "IPS_RequestAction($id, 'SetMaxChargingCurrent', 15);"
-                },
-                {
-                    "type": "Button",
-                    "caption": "20A",
-                    "onClick": "IPS_RequestAction($id, 'SetMaxChargingCurrent', 20);"
                 }
             ]
         },
