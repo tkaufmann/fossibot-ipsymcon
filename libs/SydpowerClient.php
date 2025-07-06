@@ -279,7 +279,7 @@ class SydpowerClient {
                 throw new Exception("MQTT access token not available. Call authenticate() first.");
             }
             
-            echo "Connecting to MQTT...\n";
+            // Connecting to MQTT (silent)
             $this->mqttClient = new MqttWebSocketClient('mqtt.sydpower.com', 8083, '/mqtt');
             $this->mqttClient->setCredentials($this->mqttAccessToken, 'helloyou');
             
@@ -312,7 +312,7 @@ class SydpowerClient {
                 $this->handleMqttMessage($topic, $payload);
             });
             
-            echo "MQTT connected and subscribed!\n\n";
+            // MQTT connected successfully
             return true;
         });
     }
@@ -322,26 +322,17 @@ class SydpowerClient {
         $this->responseReceived = true;
         $this->lastMqttResponse = ['topic' => $topic, 'payload' => $payload, 'time' => microtime(true)];
         
-        // DEBUG: Log ALL incoming MQTT messages
-        echo "🔄 MQTT Message received: Topic='$topic', Payload length=" . strlen($payload) . "\n";
-        
         // Check for error topics or unusual topics
         if (strpos($topic, 'error') !== false) {
+            // Only log errors, not all messages
             echo "❌ ERROR TOPIC detected: $topic\n";
-            echo "Error payload: " . bin2hex($payload) . "\n";
             return;
         }
         
         // Check if this is a device response topic we can handle
         if (!strpos($topic, '/device/response/state') && !strpos($topic, '/device/response/client/')) {
-            echo "⚠️  Non-standard topic: $topic\n";
-            echo "Payload (hex): " . bin2hex($payload) . "\n";
+            // Silently ignore non-standard topics (no spam)
             return;
-        }
-        
-        // Special handling for client response topics (like client/04)
-        if (strpos($topic, '/device/response/client/')) {
-            echo "📡 Processing client response: $topic\n";
         }
         
         $deviceMac = explode('/', $topic)[0];
@@ -388,24 +379,7 @@ class SydpowerClient {
         $this->devices[$deviceMac]['dcOutput'] = $activeOutputs[10] == '1';   // Bit[10] = DC
         $this->devices[$deviceMac]['ledOutput'] = $activeOutputs[3] == '1';
         
-        // Debug: Zeige Register 41 und ALLE Bits
-        echo "Status update for {$deviceMac}: SOC={$this->devices[$deviceMac]['soc']}%, Input={$registers[6]}W, Output={$registers[39]}W\n";
-        echo "DEBUG Register41: {$registers[41]} = " . str_pad(decbin($registers[41]), 16, '0', STR_PAD_LEFT) . " (binary)\n";
-        echo "DEBUG ActiveOutputs: " . implode('', $activeOutputs) . " (reversed bits)\n";
-        
-        // Zeige alle Bits mit Index
-        for ($i = 0; $i < 16; $i++) {
-            $bit = $activeOutputs[$i] ?? '0';
-            echo "Bit[$i]: $bit ";
-        }
-        echo "\n";
-        
-        echo "DEBUG Old assignment: AC-Bit[4]: {$activeOutputs[4]}, DC-Bit[5]: {$activeOutputs[5]}, USB-Bit[6]: {$activeOutputs[6]}\n";
-        echo "DEBUG FINAL assignment: AC-Bit[11]: {$activeOutputs[11]}, USB-Bit[9]: {$activeOutputs[9]}, DC-Bit[10]: {$activeOutputs[10]}\n";
-        
-        // Test inverse Logik
-        $inverseAC = $activeOutputs[4] == '0' ? 'AN' : 'AUS';
-        echo "DEBUG Inverse Logik Test: AC würde $inverseAC sein\n";
+        // Status update processed silently
     }
     
     private function updateDeviceStatusData($deviceMac, $registers) {
@@ -424,7 +398,7 @@ class SydpowerClient {
         $this->devices[$deviceMac]['acChargingUpperLimit'] = $registers[67];
         $this->devices[$deviceMac]['wholeMachineUnusedTime'] = $registers[68];
         
-        echo "Settings update for {$deviceMac}: MaxCurrent={$registers[20]}A, ChargeLimit={$registers[67]}\n";
+        // Settings update processed silently
     }
     
     public function getDeviceIds() {
@@ -470,55 +444,45 @@ class SydpowerClient {
                     
                 case 'REGMaxChargeCurrent':
                     if ($value === null) throw new Exception("Value required for {$command}");
-                    echo "Validating charge current: $value (allowed: 1-20A)\n";
                     $modbusMessage = ModbusHelper::getMaxChargeCurrentCommand($value);
                     break;
                     
                 case 'REGChargeUpperLimit':
                     if ($value === null) throw new Exception("Value required for {$command}");
-                    echo "Validating charge limit: $value (allowed: 0-1000 permille, divisible by 5/10)\n";
                     $modbusMessage = ModbusHelper::getChargeUpperLimitCommand($value);
                     break;
                     
                 case 'REGDischargeLowerLimit':
                     if ($value === null) throw new Exception("Value required for {$command}");
-                    echo "Validating discharge limit: $value (allowed: 0-1000 permille, divisible by 5/10)\n";
                     $modbusMessage = ModbusHelper::getDischargeLimitCommand($value);
                     break;
                     
                 case 'REGStopChargeAfter':
                     if ($value === null) throw new Exception("Value required for {$command}");
-                    echo "Validating stop charge timer: $value minutes (must be >= 0)\n";
                     $modbusMessage = ModbusHelper::getStopChargeAfterCommand($value);
                     break;
                     
                 case 'REGEnableUSBOutput':
-                    echo "Enabling USB output (safe command)\n";
                     $modbusMessage = ModbusHelper::getUSBOutputCommand(true);
                     break;
                     
                 case 'REGDisableUSBOutput':
-                    echo "Disabling USB output (safe command)\n";
                     $modbusMessage = ModbusHelper::getUSBOutputCommand(false);
                     break;
                     
                 case 'REGEnableDCOutput':
-                    echo "Enabling DC output (safe command)\n";
                     $modbusMessage = ModbusHelper::getDCOutputCommand(true);
                     break;
                     
                 case 'REGDisableDCOutput':
-                    echo "Disabling DC output (safe command)\n";
                     $modbusMessage = ModbusHelper::getDCOutputCommand(false);
                     break;
                     
                 case 'REGEnableACOutput':
-                    echo "Enabling AC output (safe command)\n";
                     $modbusMessage = ModbusHelper::getACOutputCommand(true);
                     break;
                     
                 case 'REGDisableACOutput':
-                    echo "Disabling AC output (safe command)\n";
                     $modbusMessage = ModbusHelper::getACOutputCommand(false);
                     break;
             }
@@ -531,11 +495,9 @@ class SydpowerClient {
             $topic = "{$deviceId}/client/request/data";
             $this->mqttClient->publish($topic, $modbusMessage, 1);
             
-            echo "Command sent: {$command}" . ($value !== null ? " = {$value}" : "") . "\n";
             return ['success' => "Command {$command} sent"];
             
         } catch (Exception $e) {
-            echo "Error sending command: " . $e->getMessage() . "\n";
             return ['error' => $e->getMessage()];
         }
         }); // End of apiCallWithRetry
@@ -593,7 +555,7 @@ class SydpowerClient {
             throw new Exception("MQTT not connected. Call connectMqtt() first.");
         }
         
-        echo "Listening for MQTT messages for {$timeout} seconds...\n";
+        // Listening for MQTT messages
         $this->mqttClient->loop($timeout);
     }
     

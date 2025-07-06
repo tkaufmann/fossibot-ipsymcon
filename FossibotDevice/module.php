@@ -466,7 +466,6 @@ class FossibotDevice extends IPSModule
             $client->connectMqtt();
             
             // Befehl senden und gleichzeitig Status-Update anfordern (parallel!)
-            $this->LogMessage("Sende Befehl: $command" . ($value !== null ? " mit Wert $value" : ""), KL_NOTIFY);
             $result = $client->sendCommand($deviceId, $command, $value);
             $client->requestDeviceSettings($deviceId); // Parallel Status anfordern!
             
@@ -474,8 +473,6 @@ class FossibotDevice extends IPSModule
             $gotResponse = $client->waitForResponse(3.0);
             
             if ($gotResponse) {
-                $valueText = $value !== null ? "($value)" : "";
-                $this->LogMessage("✅ $command$valueText - Gerät hat geantwortet", KL_NOTIFY);
                 $this->SetValue('ConnectionStatus', 'Online');
                 
                 // Länger warten damit ALLE Status-Updates verarbeitet werden
@@ -483,7 +480,6 @@ class FossibotDevice extends IPSModule
                 
                 // Jetzt sollten die neuen Werte da sein
                 $status = $client->getDeviceStatus($deviceId);
-                $this->LogMessage("Debug: getDeviceStatus für $deviceId: " . ($status ? json_encode($status) : 'NULL'), KL_NOTIFY);
                 
                 if ($status) {
                     $this->ProcessStatusData($status);
@@ -491,12 +487,10 @@ class FossibotDevice extends IPSModule
                 } else {
                     // Fallback: Alle verfügbaren Device-IDs prüfen
                     $allDeviceIds = $client->getDeviceIds();
-                    $this->LogMessage("Debug: Verfügbare Device-IDs: " . json_encode($allDeviceIds), KL_NOTIFY);
                     
                     foreach ($allDeviceIds as $availableId) {
                         $status = $client->getDeviceStatus($availableId);
                         if ($status) {
-                            $this->LogMessage("Debug: Erfolg mit alternativer ID: $availableId", KL_NOTIFY);
                             $this->ProcessStatusData($status);
                             $this->SetValue('LastUpdate', time());
                             break;
@@ -507,13 +501,9 @@ class FossibotDevice extends IPSModule
                 $success = true;
             } else {
                 // Keine Response - Quick Ping um zu prüfen ob Gerät erreichbar
-                $this->LogMessage("⚠️ Keine Antwort auf Befehl - prüfe Erreichbarkeit...", KL_WARNING);
-                
                 if ($client->quickPing($deviceId)) {
-                    $this->LogMessage("⚠️ Gerät erreichbar, aber Befehl-Timeout", KL_WARNING);
                     $this->SetValue('ConnectionStatus', 'Online - Befehl Timeout');
                 } else {
-                    $this->LogMessage("❌ Gerät nicht erreichbar (Offline/Standby)", KL_ERROR);
                     $this->SetValue('ConnectionStatus', 'Gerät nicht erreichbar');
                 }
                 $success = false;
