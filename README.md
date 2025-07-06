@@ -147,77 +147,67 @@ AC-Ausgang: On         (Bypass aktiv)
 
 ```mermaid
 flowchart LR
-    AC[⚡ Netz 230V] -->|400W gesamt| Split[⚙️ Aufteiler]
+    AC[⚡ Netz 230V] -->|400W gesamt| F2400[🏠 F2400 Powerstation]
     
-    Split -->|100W| Bypass[🔄 AC-Bypass]
-    Split -->|300W| Charger[🔋 Batterie-Lader]
-    
-    Bypass -->|100W| ACOut[🔌 AC-Ausgang Beispiel: 3D-Drucker 100W]
-    
-    Charger -->|300W| Battery[🔋 Batterie 2048Wh]
+    F2400 -->|100W Bypass| ACOut[🔌 AC-Ausgang 3D-Drucker 100W]
+    F2400 -->|300W| Battery[🔋 Batterie 2048Wh]
     
     Battery -.->|0W aus| DCOut[🔌 DC-Ausgang]
     Battery -.->|0W aus| USBOut[🔌 USB-Ausgang]
     
-    %% MQTT Register Mapping
-    Charger -.->|totalInput=300W| MQTT1[📊 Batterie-Eingang]
-    DCOut -.->|totalOutput=0W| MQTT2[📊 Batterie-Ausgang]
-    USBOut -.-> MQTT2
+    %% MQTT Messwerte
+    F2400 -.->|totalInput=300W| MQTT1[📊 Batterie-Eingang]
+    Battery -.->|totalOutput=0W| MQTT2[📊 Batterie-Ausgang]
     
     %% Styling
     classDef power fill:#e1f5fe
     classDef device fill:#f3e5f5
     classDef mqtt fill:#e8f5e8
     classDef off fill:#ffebee,stroke-dasharray: 5 5
-    classDef control fill:#fff9c4
     
-    class AC,Charger power
-    class ACOut,DCOut,USBOut,Battery device
+    class AC power
+    class F2400,ACOut,DCOut,USBOut,Battery device
     class MQTT1,MQTT2 mqtt
     class DCOut,USBOut off
-    class Split control
 ```
 
 **Wichtige Erkenntnisse:**
-- 🔄 **AC-Bypass**: Verbraucher am AC-Ausgang laufen direkt vom Netz
-- ⚙️ **Drehregler**: Begrenzt Ladestrom auf 300W (von 400W Gesamt-Input)
-- 📊 **Batterie-Eingang**: 300W = Was tatsächlich zur Batterie fließt
-- 📊 **Batterie-Ausgang**: 0W = DC/USB aus, AC läuft über Bypass
-- 🔋 **Bypass-Verbrauch**: Erscheint NICHT in MQTT-Messwerten
+- 🏠 **F2400 verteilt**: 100W Bypass + 300W zur Batterie (Drehregler-begrenzt)
+- 🔄 **AC-Bypass**: Läuft direkt vom Netz, nicht durch die Batterie
+- 📊 **Batterie-Eingang**: 300W = Was zur Batterie fließt (MQTT totalInput)
+- 📊 **Batterie-Ausgang**: 0W = DC/USB aus (MQTT totalOutput)
+- ⚠️ **Bypass unsichtbar**: AC-Bypass-Verbrauch erscheint nicht in MQTT
 
 ### Solar-Betrieb ohne Netz
 
 ```mermaid
 flowchart LR
-    Solar[☀️ Solar 400W] -->|400W| MPPT[⚙️ MPPT-Regler]
-    MPPT -->|380W| Battery[🔋 Batterie 2048Wh]
+    Solar[☀️ Solar 400W] -->|400W| F2400[🏠 F2400 Powerstation]
     
-    Battery -->|200W| Inverter[🔄 Inverter]
-    Battery -->|50W| DCOut[🔌 DC-Ausgang 50W]
-    Battery -->|20W| USBOut[🔌 USB-Ausgang 20W]
+    F2400 -->|380W| Battery[🔋 Batterie 2048Wh]
+    F2400 -->|180W via Inverter| ACOut[🔌 AC-Ausgang 180W]
+    F2400 -->|50W| DCOut[🔌 DC-Ausgang 50W]
+    F2400 -->|20W| USBOut[🔌 USB-Ausgang 20W]
     
-    Inverter -->|180W| ACOut[🔌 AC-Ausgang 180W]
-    
-    %% MQTT Register Mapping
-    MPPT -.->|totalInput=380W| MQTT1[📊 Batterie-Eingang]
-    DCOut -.->|totalOutput=250W| MQTT2[📊 Batterie-Ausgang]
-    USBOut -.-> MQTT2
-    Inverter -.-> MQTT2
+    %% MQTT Messwerte
+    F2400 -.->|totalInput=380W| MQTT1[📊 Batterie-Eingang]
+    F2400 -.->|totalOutput=250W| MQTT2[📊 Batterie-Ausgang]
     
     %% Styling
     classDef power fill:#fff3e0
     classDef device fill:#f3e5f5
     classDef mqtt fill:#e8f5e8
     
-    class Solar,MPPT power
-    class ACOut,DCOut,USBOut,Battery,Inverter device
+    class Solar power
+    class F2400,ACOut,DCOut,USBOut,Battery device
     class MQTT1,MQTT2 mqtt
 ```
 
 **Wichtige Erkenntnisse:**
-- ☀️ **Ohne Netz**: AC-Ausgang läuft über Inverter (nicht Bypass)
-- 📊 **Batterie-Eingang**: 380W = Solar-Input (minus MPPT-Verluste)
-- 📊 **Batterie-Ausgang**: 250W = AC+DC+USB kombiniert über Inverter
+- 🏠 **F2400 ohne Netz**: Alle Ausgänge laufen aus der Batterie (kein Bypass)
+- ⚙️ **MPPT-Verluste**: 400W Solar → 380W nutzbar (5% Verlust)
+- 📊 **Batterie-Eingang**: 380W Solar-Input (MQTT totalInput)
+- 📊 **Batterie-Ausgang**: 250W = AC+DC+USB kombiniert (MQTT totalOutput)
 - 🔋 **Netto-Ladung**: +130W (380W rein, 250W raus)
 
 ### Stromausfall-Umschaltung (<8ms)
