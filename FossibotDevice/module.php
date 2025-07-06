@@ -148,9 +148,6 @@ class FossibotDevice extends IPSModule
             // Kurz warten und auf Updates hören
             $client->listenForUpdates(5);
             
-            // MQTT-Verbindung sauber schließen
-            $client->disconnect();
-            
             // Alle verfügbaren Geräte-IDs prüfen
             $allDeviceIds = $client->getDeviceIds();
             $this->LogMessage('Debug: Verfügbare Geräte-IDs: ' . json_encode($allDeviceIds), KL_DEBUG);
@@ -179,6 +176,8 @@ class FossibotDevice extends IPSModule
                 // Status-Update erfolgreich
                 $this->LogMessage('Status aktualisiert', KL_DEBUG);
                 
+                // MQTT-Verbindung sauber schließen
+                $client->disconnect();
                 return true;
             } else {
                 $this->SetValue('ConnectionStatus', 'Keine Daten');
@@ -188,12 +187,18 @@ class FossibotDevice extends IPSModule
                 $allData = $client->getAllDeviceData();
                 $this->LogMessage('Debug: Komplettes devices Array: ' . json_encode($allData), KL_DEBUG);
                 
+                // MQTT-Verbindung sauber schließen
+                $client->disconnect();
                 return false;
             }
             
         } catch (Exception $e) {
             $this->SetValue('ConnectionStatus', 'Fehler');
             $this->LogMessage('Update-Fehler: ' . $e->getMessage(), KL_ERROR);
+            // MQTT-Verbindung sauber schließen auch bei Fehlern
+            if (isset($client)) {
+                $client->disconnect();
+            }
             return false;
         }
     }
