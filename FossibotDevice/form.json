@@ -134,21 +134,11 @@
         },
         {
             "type": "Label",
-            "caption": "⚡ Ladelimit (Prozent)"
+            "caption": "⚡ Ladelimit (60-100%)"
         },
         {
             "type": "RowLayout",
             "items": [
-                {
-                    "type": "Button",
-                    "caption": "50%",
-                    "onClick": "IPS_RequestAction($id, 'SetChargingLimit', 50);"
-                },
-                {
-                    "type": "Button",
-                    "caption": "55%",
-                    "onClick": "IPS_RequestAction($id, 'SetChargingLimit', 55);"
-                },
                 {
                     "type": "Button",
                     "caption": "60%",
@@ -198,7 +188,7 @@
         },
         {
             "type": "Label",
-            "caption": "🔋 Entladelimit (Prozent)"
+            "caption": "🔋 Entladelimit (5-50%)"
         },
         {
             "type": "RowLayout",
@@ -232,6 +222,26 @@
                     "type": "Button",
                     "caption": "30%",
                     "onClick": "IPS_RequestAction($id, 'SetDischargeLimit', 30);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "35%",
+                    "onClick": "IPS_RequestAction($id, 'SetDischargeLimit', 35);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "40%",
+                    "onClick": "IPS_RequestAction($id, 'SetDischargeLimit', 40);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "45%",
+                    "onClick": "IPS_RequestAction($id, 'SetDischargeLimit', 45);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "50%",
+                    "onClick": "IPS_RequestAction($id, 'SetDischargeLimit', 50);"
                 }
             ]
         },

@@ -315,12 +315,12 @@ class FossibotDevice extends IPSModule
     }
 
     /**
-     * Ladelimit setzen (0-100%)
+     * Ladelimit setzen (60-100%)
      */
     public function FBT_SetChargingLimit(int $percent)
     {
-        if ($percent < 0 || $percent > 100) {
-            $this->LogMessage('Ladelimit muss zwischen 0-100% liegen', KL_ERROR);
+        if ($percent < 60 || $percent > 100) {
+            $this->LogMessage('Ladelimit muss zwischen 60-100% liegen', KL_ERROR);
             return false;
         }
         
@@ -355,12 +355,12 @@ class FossibotDevice extends IPSModule
     }
 
     /**
-     * Entladelimit setzen (0-100%)
+     * Entladelimit setzen (5-50%)
      */
     public function FBT_SetDischargeLimit(int $percent)
     {
-        if ($percent < 0 || $percent > 100) {
-            $this->LogMessage('Entladelimit muss zwischen 0-100% liegen', KL_ERROR);
+        if ($percent < 5 || $percent > 50) {
+            $this->LogMessage('Entladelimit muss zwischen 5-50% liegen', KL_ERROR);
             return false;
         }
         
