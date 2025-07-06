@@ -483,9 +483,25 @@ class FossibotDevice extends IPSModule
                 
                 // Jetzt sollten die neuen Werte da sein
                 $status = $client->getDeviceStatus($deviceId);
+                $this->LogMessage("Debug: getDeviceStatus für $deviceId: " . ($status ? json_encode($status) : 'NULL'), KL_NOTIFY);
+                
                 if ($status) {
                     $this->ProcessStatusData($status);
                     $this->SetValue('LastUpdate', time());
+                } else {
+                    // Fallback: Alle verfügbaren Device-IDs prüfen
+                    $allDeviceIds = $client->getDeviceIds();
+                    $this->LogMessage("Debug: Verfügbare Device-IDs: " . json_encode($allDeviceIds), KL_NOTIFY);
+                    
+                    foreach ($allDeviceIds as $availableId) {
+                        $status = $client->getDeviceStatus($availableId);
+                        if ($status) {
+                            $this->LogMessage("Debug: Erfolg mit alternativer ID: $availableId", KL_NOTIFY);
+                            $this->ProcessStatusData($status);
+                            $this->SetValue('LastUpdate', time());
+                            break;
+                        }
+                    }
                 }
                 
                 $success = true;
