@@ -30,71 +30,49 @@ class FossibotDevice extends IPSModule
         $this->CreateChargingCurrentProfile();
 
         // THEN: Register variables with profiles
-        // Kategorien für Gruppierung erstellen
-        $statusCat = $this->RegisterCategoryByPosition('Status', 100);
-        $outputsCat = $this->RegisterCategoryByPosition('Ausgänge', 200);
-        $paramsCat = $this->RegisterCategoryByPosition('Parameter', 300);
-        $systemCat = $this->RegisterCategoryByPosition('System', 900);
-        
         // === STATUS & ÜBERSICHT ===
         // Redundante Status-Variablen entfernen
         @$this->UnregisterVariable('ChargingStatus');
         @$this->UnregisterVariable('DischargingStatus');
         
-        // Hauptvariablen in Status-Kategorie
-        $this->RegisterVariableInteger('BatterySOC', 'Ladezustand', '~Battery.100', 10);
-        IPS_SetParent($this->GetIDForIdent('BatterySOC'), $statusCat);
-        
-        $this->RegisterVariableFloat('TotalInput', 'Gesamt-Eingang', '~Watt.3680', 20);
-        IPS_SetParent($this->GetIDForIdent('TotalInput'), $statusCat);
-        
-        $this->RegisterVariableFloat('TotalOutput', 'Gesamt-Ausgang', '~Watt.3680', 30);
-        IPS_SetParent($this->GetIDForIdent('TotalOutput'), $statusCat);
+        // Hauptvariablen ohne Kategorien (erstmal funktionierend)
+        $this->RegisterVariableInteger('BatterySOC', 'Ladezustand', '~Battery.100', 100);
+        $this->RegisterVariableFloat('TotalInput', 'Gesamt-Eingang', '~Watt.3680', 110);
+        $this->RegisterVariableFloat('TotalOutput', 'Gesamt-Ausgang', '~Watt.3680', 120);
 
         // === AUSGÄNGE ===
-        $this->RegisterVariableBoolean('ACOutput', 'AC Ausgang', '~Switch', 10);
+        $this->RegisterVariableBoolean('ACOutput', 'AC Ausgang', '~Switch', 200);
         $this->EnableAction('ACOutput');
-        IPS_SetParent($this->GetIDForIdent('ACOutput'), $outputsCat);
-        
-        $this->RegisterVariableBoolean('DCOutput', 'DC Ausgang', '~Switch', 20);
+        $this->RegisterVariableBoolean('DCOutput', 'DC Ausgang', '~Switch', 210);
         $this->EnableAction('DCOutput');
-        IPS_SetParent($this->GetIDForIdent('DCOutput'), $outputsCat);
-        
-        $this->RegisterVariableBoolean('USBOutput', 'USB Ausgang', '~Switch', 30);
+        $this->RegisterVariableBoolean('USBOutput', 'USB Ausgang', '~Switch', 220);
         $this->EnableAction('USBOutput');
-        IPS_SetParent($this->GetIDForIdent('USBOutput'), $outputsCat);
 
         // === LADEPARAMETER ===
-        $this->RegisterVariableInteger('MaxChargingCurrent', 'Max. Ladestrom', 'FBT.ChargingCurrent', 10);
+        $this->RegisterVariableInteger('MaxChargingCurrent', 'Max. Ladestrom', 'FBT.ChargingCurrent', 300);
         $this->EnableAction('MaxChargingCurrent');
-        IPS_SetParent($this->GetIDForIdent('MaxChargingCurrent'), $paramsCat);
         // Standardwert setzen falls Variable leer
         if ($this->GetValue('MaxChargingCurrent') == 0) {
             $this->SetValue('MaxChargingCurrent', 3); // 3A = 690W (moderate Ladung)
         }
         
-        $this->RegisterVariableInteger('ChargingLimit', 'Ladelimit', 'FBT.ChargingLimit', 20);
+        $this->RegisterVariableInteger('ChargingLimit', 'Ladelimit', 'FBT.ChargingLimit', 310);
         $this->EnableAction('ChargingLimit');
-        IPS_SetParent($this->GetIDForIdent('ChargingLimit'), $paramsCat);
         // Standardwert setzen falls Variable leer
         if ($this->GetValue('ChargingLimit') == 0) {
             $this->SetValue('ChargingLimit', 80);
         }
         
-        $this->RegisterVariableInteger('DischargeLimit', 'Entladelimit', 'FBT.DischargeLimit', 30);
+        $this->RegisterVariableInteger('DischargeLimit', 'Entladelimit', 'FBT.DischargeLimit', 320);
         $this->EnableAction('DischargeLimit');
-        IPS_SetParent($this->GetIDForIdent('DischargeLimit'), $paramsCat);
         // Standardwert setzen falls Variable leer
         if ($this->GetValue('DischargeLimit') < 0) {
             $this->SetValue('DischargeLimit', 20);
         }
 
         // === SYSTEM-INFO ===
-        $this->RegisterVariableInteger('LastUpdate', 'Letzte Aktualisierung', '~UnixTimestamp', 10);
-        IPS_SetParent($this->GetIDForIdent('LastUpdate'), $systemCat);
-        
-        $this->RegisterVariableString('ConnectionStatus', 'Verbindungsstatus', '', 20);
-        IPS_SetParent($this->GetIDForIdent('ConnectionStatus'), $systemCat);
+        $this->RegisterVariableInteger('LastUpdate', 'Letzte Aktualisierung', '~UnixTimestamp', 900);
+        $this->RegisterVariableString('ConnectionStatus', 'Verbindungsstatus', '', 910);
 
         // Validierung
         $deviceId = $this->ReadPropertyString('DeviceID');
@@ -748,22 +726,6 @@ class FossibotDevice extends IPSModule
         IPS_SetVariableProfileAssociation($profileName, 3, '3', '', 0x80FF00);
         IPS_SetVariableProfileAssociation($profileName, 4, '4', '', 0xFFFF00);
         IPS_SetVariableProfileAssociation($profileName, 5, '5', '', 0xFF8000);
-    }
-
-    /**
-     * Hilfsfunktion: Kategorie an bestimmter Position registrieren
-     */
-    private function RegisterCategoryByPosition($name, $position)
-    {
-        $categoryID = @IPS_GetObjectIDByIdent($name, $this->InstanceID);
-        if ($categoryID === false) {
-            $categoryID = IPS_CreateCategory();
-            IPS_SetIdent($categoryID, $name);
-            IPS_SetName($categoryID, $name);
-            IPS_SetParent($categoryID, $this->InstanceID);
-        }
-        IPS_SetPosition($categoryID, $position);
-        return $categoryID;
     }
 
     /**
