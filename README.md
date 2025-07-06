@@ -14,8 +14,8 @@ Ein IP-Symcon Modul zur Überwachung und Steuerung von Fossibot Powerstations ü
 ### Monitoring
 - **Echtzeit-Daten** alle 2 Minuten automatisch aktualisiert
 - **Batteriezustand** (SOC) in Prozent
-- **Gesamt-Eingang** (Solar/AC kombiniert)
-- **Gesamt-Ausgang** (AC/DC/USB kombiniert)
+- **Batterie-Eingang** (Solar/AC → Batterie)
+- **Batterie-Ausgang** (Batterie → DC/USB/Inverter)
 - **Output-Status** (AC/DC/USB Ausgänge An/Aus)
 - **Ladelimits** (Obere/Untere Grenzwerte)
 - **Ladestrom-Einstellungen**
@@ -69,8 +69,8 @@ Ein IP-Symcon Modul zur Überwachung und Steuerung von Fossibot Powerstations ü
 | Variable | Typ | Beschreibung | Einheit |
 |----------|-----|--------------|---------|
 | Ladezustand | Integer | Batterie-SOC | % |
-| Gesamt-Eingang | Float | Solar/AC kombiniert | W |
-| Gesamt-Ausgang | Float | AC/DC/USB kombiniert | W |
+| Batterie-Eingang | Float | Solar/AC → Batterie | W |
+| Batterie-Ausgang | Float | Batterie → DC/USB/Inverter | W |
 | AC Ausgang | Boolean | AC-Ausgang Status | An/Aus |
 | DC Ausgang | Boolean | DC-Ausgang Status | An/Aus |
 | USB Ausgang | Boolean | USB-Ausgang Status | An/Aus |
@@ -117,6 +117,27 @@ Ein IP-Symcon Modul zur Überwachung und Steuerung von Fossibot Powerstations ü
 - **Solar**: bis 500W (automatisch, je nach Verfügbarkeit)
 - **Gesamt**: bis **1600W kombiniert** bei Sonnenschein
 - **Ladezeit**: ca. 1,5h von 0% auf 80% bei vollem AC+Solar
+
+### UPS-Bypass-Verhalten (F2400)
+
+**Wichtiges Verhalten bei AC-Anschluss:**
+- **AC-Lasten** werden **direkt** vom Netz versorgt (Bypass)
+- **Batterie-Eingang** zeigt nur Strom **zur Batterie**
+- **Batterie-Ausgang** zeigt nur Strom **aus der Batterie** (DC/USB/Inverter bei Stromausfall)
+- **AC-Bypass-Strom erscheint NICHT** in den Messwerten
+
+**Beispiel bei angeschlossenem AC:**
+```
+Situation: 3D-Drucker 15W am AC-Ausgang, Batterie lädt mit 300W
+Batterie-Eingang: 300W (Netzstrom → Batterie)
+Batterie-Ausgang: 0W   (AC-Last läuft über Bypass)
+AC-Ausgang: On         (Bypass aktiv)
+```
+
+**Bei Stromausfall:**
+- **Umschaltung in <8ms** auf Batteriebetrieb
+- **Batterie-Ausgang** zeigt dann die AC-Last
+- **Batterie-Eingang** wird 0W
 
 ### Steuerung über Buttons
 - **AC/DC/USB Ein/Aus** - Direkte Ausgänge-Steuerung
@@ -296,7 +317,12 @@ $fossibotID = $instances[0]; // Erste gefundene Instanz
 
 ## 🔄 Changelog
 
-### v1.6 - Aktuell
+### v1.7 - Aktuell
+- ✅ **Präzise Batterie-Labels** - "Batterie-Eingang/Ausgang" statt "Gesamt"
+- ✅ **UPS-Bypass-Verhalten dokumentiert** - AC-Lasten erscheinen nicht in Messwerten
+- ✅ **Technisch korrekte Interpretation** - Werte zeigen echten Batterie-Durchsatz
+
+### v1.6
 - ✅ **F2400-optimierte Ladestrom-Skala** - 1-5A statt 1-20A (da F2400 max 1100W AC)
 - ✅ **Vollständige Webfront-Steuerung** - Slider für Limits, Dropdown für Ladestrom
 - ✅ **Kombinierte AC+Solar Dokumentation** - bis 1600W Gesamtladeleistung

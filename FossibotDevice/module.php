@@ -37,8 +37,8 @@ class FossibotDevice extends IPSModule
         
         // Hauptvariablen ohne Kategorien (erstmal funktionierend)
         $this->RegisterVariableInteger('BatterySOC', 'Ladezustand', '~Battery.100', 100);
-        $this->RegisterVariableFloat('TotalInput', 'Gesamt-Eingang', '~Watt.3680', 110);
-        $this->RegisterVariableFloat('TotalOutput', 'Gesamt-Ausgang', '~Watt.3680', 120);
+        $this->RegisterVariableFloat('TotalInput', 'Batterie-Eingang', '~Watt.3680', 110);
+        $this->RegisterVariableFloat('TotalOutput', 'Batterie-Ausgang', '~Watt.3680', 120);
 
         // === AUSGÄNGE ===
         $this->RegisterVariableBoolean('ACOutput', 'AC Ausgang', '~Switch', 200);
