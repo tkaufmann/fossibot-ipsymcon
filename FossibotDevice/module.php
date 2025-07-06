@@ -30,16 +30,14 @@ class FossibotDevice extends IPSModule
         $this->CreateChargingCurrentProfile();
 
         // THEN: Register variables with profiles
-        // Energie-Variablen
+        // === STATUS & ÜBERSICHT (100-199) ===
         $this->RegisterVariableInteger('BatterySOC', 'Ladezustand', '~Battery.100', 100);
-        $this->RegisterVariableFloat('TotalInput', 'Eingangsleistung', '~Watt.3680', 110);
-        $this->RegisterVariableFloat('TotalOutput', 'Ausgangsleistung', '~Watt.3680', 120);
-        
-        // Status-Variablen mit Leistungsanzeige
-        $this->RegisterVariableFloat('ChargingStatus', 'Lade-Status', 'FBT.ChargingStatus', 130);
-        $this->RegisterVariableFloat('DischargingStatus', 'Entlade-Status', 'FBT.DischargingStatus', 140);
+        $this->RegisterVariableFloat('TotalInput', 'Gesamt-Eingang', '~Watt.3680', 110);
+        $this->RegisterVariableFloat('TotalOutput', 'Gesamt-Ausgang', '~Watt.3680', 120);
+        $this->RegisterVariableFloat('ChargingStatus', 'Eingang-Status', 'FBT.ChargingStatus', 130);
+        $this->RegisterVariableFloat('DischargingStatus', 'Ausgang-Status', 'FBT.DischargingStatus', 140);
 
-        // Ausgänge mit Webfront-Steuerung
+        // === AUSGÄNGE (200-299) ===
         $this->RegisterVariableBoolean('ACOutput', 'AC Ausgang', '~Switch', 200);
         $this->EnableAction('ACOutput');
         $this->RegisterVariableBoolean('DCOutput', 'DC Ausgang', '~Switch', 210);
@@ -47,31 +45,31 @@ class FossibotDevice extends IPSModule
         $this->RegisterVariableBoolean('USBOutput', 'USB Ausgang', '~Switch', 220);
         $this->EnableAction('USBOutput');
 
-        // Ladelimits mit Webfront-Steuerung
-        $this->RegisterVariableInteger('ChargingLimit', 'Ladelimit', 'FBT.ChargingLimit', 300);
+        // === LADEPARAMETER (300-399) ===
+        $this->RegisterVariableInteger('MaxChargingCurrent', 'Max. Ladestrom', 'FBT.ChargingCurrent', 300);
+        $this->EnableAction('MaxChargingCurrent');
+        // Standardwert setzen falls Variable leer
+        if ($this->GetValue('MaxChargingCurrent') == 0) {
+            $this->SetValue('MaxChargingCurrent', 3); // 3A = 690W (moderate Ladung)
+        }
+        
+        $this->RegisterVariableInteger('ChargingLimit', 'Ladelimit', 'FBT.ChargingLimit', 310);
         $this->EnableAction('ChargingLimit');
         // Standardwert setzen falls Variable leer
         if ($this->GetValue('ChargingLimit') == 0) {
             $this->SetValue('ChargingLimit', 80);
         }
         
-        $this->RegisterVariableInteger('DischargeLimit', 'Entladelimit', 'FBT.DischargeLimit', 310);
+        $this->RegisterVariableInteger('DischargeLimit', 'Entladelimit', 'FBT.DischargeLimit', 320);
         $this->EnableAction('DischargeLimit');
         // Standardwert setzen falls Variable leer
         if ($this->GetValue('DischargeLimit') < 0) {
             $this->SetValue('DischargeLimit', 20);
         }
-        
-        $this->RegisterVariableInteger('MaxChargingCurrent', 'Max. Ladestrom', 'FBT.ChargingCurrent', 320);
-        $this->EnableAction('MaxChargingCurrent');
-        // Standardwert setzen falls Variable leer
-        if ($this->GetValue('MaxChargingCurrent') == 0) {
-            $this->SetValue('MaxChargingCurrent', 3); // 3A = 690W (moderate Ladung)
-        }
 
-        // Systemstatus
-        $this->RegisterVariableInteger('LastUpdate', 'Letzte Aktualisierung', '~UnixTimestamp', 400);
-        $this->RegisterVariableString('ConnectionStatus', 'Verbindungsstatus', '', 410);
+        // === SYSTEM-INFO (900-999) ===
+        $this->RegisterVariableInteger('LastUpdate', 'Letzte Aktualisierung', '~UnixTimestamp', 900);
+        $this->RegisterVariableString('ConnectionStatus', 'Verbindungsstatus', '', 910);
 
         // Validierung
         $deviceId = $this->ReadPropertyString('DeviceID');
@@ -601,7 +599,7 @@ class FossibotDevice extends IPSModule
     }
 
     /**
-     * Erstellt Custom Profile für Lade-Status
+     * Erstellt Custom Profile für Eingang-Status
      */
     private function CreateChargingStatusProfile()
     {
@@ -611,12 +609,12 @@ class FossibotDevice extends IPSModule
             IPS_CreateVariableProfile($profileName, 2); // 2 = Float
             IPS_SetVariableProfileText($profileName, '', 'W');
             IPS_SetVariableProfileDigits($profileName, 1);
-            IPS_SetVariableProfileIcon($profileName, 'Battery');
+            IPS_SetVariableProfileIcon($profileName, 'Energy');
         }
     }
 
     /**
-     * Erstellt Custom Profile für Entlade-Status  
+     * Erstellt Custom Profile für Ausgang-Status  
      */
     private function CreateDischargingStatusProfile()
     {

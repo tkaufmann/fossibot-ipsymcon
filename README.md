@@ -14,8 +14,8 @@ Ein IP-Symcon Modul zur Überwachung und Steuerung von Fossibot Powerstations ü
 ### Monitoring
 - **Echtzeit-Daten** alle 2 Minuten automatisch aktualisiert
 - **Batteriezustand** (SOC) in Prozent
-- **Eingangsleistung** (Solar/AC-Ladung)
-- **Ausgangsleistung** (Aktuelle Verbrauchsleistung)
+- **Gesamt-Eingang** (Solar/AC kombiniert)
+- **Gesamt-Ausgang** (AC/DC/USB kombiniert)
 - **Output-Status** (AC/DC/USB Ausgänge An/Aus)
 - **Ladelimits** (Obere/Untere Grenzwerte)
 - **Ladestrom-Einstellungen**
@@ -69,8 +69,8 @@ Ein IP-Symcon Modul zur Überwachung und Steuerung von Fossibot Powerstations ü
 | Variable | Typ | Beschreibung | Einheit |
 |----------|-----|--------------|---------|
 | Ladezustand | Integer | Batterie-SOC | % |
-| Eingangsleistung | Float | Solar/AC Input | W |
-| Ausgangsleistung | Float | Aktueller Verbrauch | W |
+| Gesamt-Eingang | Float | Solar/AC kombiniert | W |
+| Gesamt-Ausgang | Float | AC/DC/USB kombiniert | W |
 | AC Ausgang | Boolean | AC-Ausgang Status | An/Aus |
 | DC Ausgang | Boolean | DC-Ausgang Status | An/Aus |
 | USB Ausgang | Boolean | USB-Ausgang Status | An/Aus |
