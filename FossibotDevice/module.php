@@ -95,6 +95,9 @@ class FossibotDevice extends IPSModule
             case 'SetChargingLimit':
                 $this->FBT_SetChargingLimit($Value);
                 break;
+            case 'SetDischargeLimit':
+                $this->FBT_SetDischargeLimit($Value);
+                break;
             case 'RequestSettings':
                 $this->FBT_RequestSettings();
                 break;
@@ -349,6 +352,20 @@ class FossibotDevice extends IPSModule
         }
         
         return $this->SendDeviceCommand('REGStopChargeAfter', $minutes);
+    }
+
+    /**
+     * Entladelimit setzen (0-100%)
+     */
+    public function FBT_SetDischargeLimit(int $percent)
+    {
+        if ($percent < 0 || $percent > 100) {
+            $this->LogMessage('Entladelimit muss zwischen 0-100% liegen', KL_ERROR);
+            return false;
+        }
+        
+        $promille = $percent * 10; // Konvertierung zu Promille
+        return $this->SendDeviceCommand('REGDischargeLowerLimit', $promille);
     }
 
 

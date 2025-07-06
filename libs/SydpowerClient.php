@@ -402,6 +402,7 @@ class SydpowerClient {
             'REGRequestSettings',
             'REGMaxChargeCurrent',
             'REGChargeUpperLimit', 
+            'REGDischargeLowerLimit',
             'REGStopChargeAfter',
             'REGEnableUSBOutput',
             'REGDisableUSBOutput',
@@ -437,6 +438,12 @@ class SydpowerClient {
                     if ($value === null) throw new Exception("Value required for {$command}");
                     echo "Validating charge limit: $value (allowed: 0-1000 permille, divisible by 5/10)\n";
                     $modbusMessage = ModbusHelper::getChargeUpperLimitCommand($value);
+                    break;
+                    
+                case 'REGDischargeLowerLimit':
+                    if ($value === null) throw new Exception("Value required for {$command}");
+                    echo "Validating discharge limit: $value (allowed: 0-1000 permille, divisible by 5/10)\n";
+                    $modbusMessage = ModbusHelper::getDischargeLimitCommand($value);
                     break;
                     
                 case 'REGStopChargeAfter':

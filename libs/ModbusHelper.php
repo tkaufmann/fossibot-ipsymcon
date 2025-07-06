@@ -238,6 +238,11 @@ class ModbusHelper {
         return self::getWriteModbus(self::REGISTER_MODBUS_ADDRESS, self::REGISTER_CHARGING_LIMIT, $validation['value']);
     }
     
+    public static function getDischargeLimitCommand($value) {
+        $validation = self::validateRegisterValue(self::REGISTER_DISCHARGE_LIMIT, $value);
+        return self::getWriteModbus(self::REGISTER_MODBUS_ADDRESS, self::REGISTER_DISCHARGE_LIMIT, $validation['value']);
+    }
+    
     public static function getStopChargeAfterCommand($value) {
         $validation = self::validateRegisterValue(self::REGISTER_STOP_CHARGE_AFTER, $value);
         return self::getWriteModbus(self::REGISTER_MODBUS_ADDRESS, self::REGISTER_STOP_CHARGE_AFTER, $validation['value']);
