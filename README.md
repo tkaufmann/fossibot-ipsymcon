@@ -139,6 +139,164 @@ AC-Ausgang: On         (Bypass aktiv)
 - **Batterie-Ausgang** zeigt dann die AC-Last
 - **Batterie-Eingang** wird 0W
 
+## 🔌 Stromfluss-Diagramme (F2400)
+
+### Normal-Betrieb mit AC-Anschluss (UPS-Bypass)
+
+```mermaid
+flowchart LR
+    AC[⚡ Netz 230V] -->|300W| Bypass[🔄 AC-Bypass]
+    AC -->|299W| Charger[🔋 Batterie-Lader]
+    
+    Bypass -->|15W| ACOut[🔌 AC-Ausgang\n3D-Drucker 15W]
+    
+    Charger -->|299W| Battery[🔋 Batterie\n2048Wh]
+    
+    Battery -.->|0W\n(aus)| DCOut[🔌 DC-Ausgang]
+    Battery -.->|0W\n(aus)| USBOut[🔌 USB-Ausgang]
+    
+    %% MQTT Register Mapping
+    Charger -.->|totalInput=299W| MQTT1[📊 Batterie-Eingang]
+    DCOut -.->|totalOutput=0W| MQTT2[📊 Batterie-Ausgang]
+    USBOut -.-> MQTT2
+    
+    %% Styling
+    classDef power fill:#e1f5fe
+    classDef device fill:#f3e5f5
+    classDef mqtt fill:#e8f5e8
+    classDef off fill:#ffebee,stroke-dasharray: 5 5
+    
+    class AC,Charger power
+    class ACOut,DCOut,USBOut,Battery device
+    class MQTT1,MQTT2 mqtt
+    class DCOut,USBOut off
+```
+
+**Wichtige Erkenntnisse:**
+- 🔄 **AC-Bypass**: 3D-Drucker läuft direkt vom Netz (nicht über Batterie)
+- 📊 **Batterie-Eingang**: 299W = Netz-Input minus AC-Bypass-Verbrauch
+- 📊 **Batterie-Ausgang**: 0W = DC/USB sind aus, AC läuft über Bypass
+- 🔋 **Batterie**: Wird geladen, obwohl "Lädt gerade" = Off zeigt
+
+### Solar-Betrieb ohne Netz
+
+```mermaid
+flowchart LR
+    Solar[☀️ Solar 400W] -->|400W| MPPT[⚙️ MPPT-Regler]
+    MPPT -->|380W| Battery[🔋 Batterie\n2048Wh]
+    
+    Battery -->|200W| Inverter[🔄 Inverter]
+    Battery -->|50W| DCOut[🔌 DC-Ausgang\n50W]
+    Battery -->|20W| USBOut[🔌 USB-Ausgang\n20W]
+    
+    Inverter -->|180W| ACOut[🔌 AC-Ausgang\n180W]
+    
+    %% MQTT Register Mapping
+    MPPT -.->|totalInput=380W| MQTT1[📊 Batterie-Eingang]
+    DCOut -.->|totalOutput=250W| MQTT2[📊 Batterie-Ausgang]
+    USBOut -.-> MQTT2
+    Inverter -.-> MQTT2
+    
+    %% Styling
+    classDef power fill:#fff3e0
+    classDef device fill:#f3e5f5
+    classDef mqtt fill:#e8f5e8
+    
+    class Solar,MPPT power
+    class ACOut,DCOut,USBOut,Battery,Inverter device
+    class MQTT1,MQTT2 mqtt
+```
+
+**Wichtige Erkenntnisse:**
+- ☀️ **Kein AC-Bypass**: Alle Ausgänge laufen über Batterie
+- 📊 **Batterie-Eingang**: 380W = Solar-Input (minus MPPT-Verluste)
+- 📊 **Batterie-Ausgang**: 250W = AC+DC+USB kombiniert
+- 🔋 **Netto-Ladung**: +130W (380W rein, 250W raus)
+
+### Stromausfall-Umschaltung (<8ms)
+
+```mermaid
+sequenceDiagram
+    participant Netz as ⚡ Netz
+    participant Bypass as 🔄 AC-Bypass
+    participant Battery as 🔋 Batterie
+    participant Inverter as 🔄 Inverter
+    participant Load as 🔌 AC-Last
+    participant MQTT as 📊 MQTT-Werte
+    
+    Note over Netz,MQTT: Normal-Betrieb (UPS-Bypass)
+    Netz->>Bypass: 15W direkter Durchfluss
+    Bypass->>Load: 15W (3D-Drucker)
+    Netz->>Battery: 300W Ladestrom
+    MQTT->>MQTT: Batterie-Eingang=300W<br/>Batterie-Ausgang=0W
+    
+    Note over Netz,MQTT: ⚡ STROMAUSFALL ⚡
+    Netz--xBypass: ❌ Kein Strom
+    Note over Bypass,Inverter: Umschaltung <8ms
+    Battery->>Inverter: 15W für AC-Last
+    Inverter->>Load: 15W (3D-Drucker)
+    MQTT->>MQTT: Batterie-Eingang=0W<br/>Batterie-Ausgang=15W
+    
+    Note over Netz,MQTT: 🔌 STROM ZURÜCK 🔌
+    Netz->>Bypass: 15W direkter Durchfluss
+    Note over Bypass,Inverter: Rückschaltung <8ms
+    Bypass->>Load: 15W (3D-Drucker)
+    Battery--xInverter: ❌ Kein Bedarf
+    MQTT->>MQTT: Batterie-Eingang=300W<br/>Batterie-Ausgang=0W
+```
+
+### MQTT-Register-Mapping
+
+```mermaid
+graph TB
+    subgraph "📡 MQTT Register (Modbus)"
+        R6["Register 6<br/>totalInput<br/>(Batterie-Eingang)"]
+        R39["Register 39<br/>totalOutput<br/>(Batterie-Ausgang)"]
+        R56["Register 56<br/>SOC<br/>(Ladezustand)"]
+        R41["Register 41<br/>activeOutputList<br/>(AC/DC/USB Status)"]
+    end
+    
+    subgraph "⚡ Physikalische Messungen"
+        BattIn["🔋 Strom zur Batterie<br/>Solar + AC-Überschuss"]
+        BattOut["🔋 Strom aus Batterie<br/>DC + USB + Inverter"]
+        Outputs["🔌 Output-Status<br/>Bit-Maske"]
+    end
+    
+    subgraph "📊 IP-Symcon Anzeige"
+        IPSIn["Batterie-Eingang<br/>(TotalInput)"]
+        IPSOut["Batterie-Ausgang<br/>(TotalOutput)"]
+        IPSSOC["Ladezustand<br/>(BatterySOC)"]
+        IPSOutputs["AC/DC/USB Ausgänge<br/>(Boolean-Schalter)"]
+    end
+    
+    R6 --> BattIn --> IPSIn
+    R39 --> BattOut --> IPSOut
+    R56 --> IPSSOC
+    R41 --> Outputs --> IPSOutputs
+    
+    %% Styling
+    classDef mqtt fill:#e3f2fd
+    classDef physical fill:#fff3e0
+    classDef ips fill:#e8f5e8
+    
+    class R6,R39,R56,R41 mqtt
+    class BattIn,BattOut,Outputs physical
+    class IPSIn,IPSOut,IPSSOC,IPSOutputs ips
+```
+
+**Wichtige MQTT-Register:**
+- **Register 6** (totalInput) = Batterie-Eingang [W]
+- **Register 39** (totalOutput) = Batterie-Ausgang [W]  
+- **Register 56** (SOC) = Ladezustand [Promille → %]
+- **Register 41** (activeOutputList) = Output-Status [Bit-Maske]
+
+**Bit-Zuordnung Register 41:**
+```
+Bit 9  = USB-Ausgang
+Bit 10 = DC-Ausgang  
+Bit 11 = AC-Ausgang
+```
+
 ### Steuerung über Buttons
 - **AC/DC/USB Ein/Aus** - Direkte Ausgänge-Steuerung
 - **Ladestrom** - 1A, 2A, 3A, 4A, 5A Buttons (angepasst für F2400)
