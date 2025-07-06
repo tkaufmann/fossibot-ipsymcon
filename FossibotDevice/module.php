@@ -291,9 +291,7 @@ class FossibotDevice extends IPSModule
             $this->SetValue('TotalOutput', $totalOutput);
         }
         
-        // Lade-/Entlade-Status mit konkreter Leistung anzeigen
-        $this->SetValue('ChargingStatus', $totalInput);
-        $this->SetValue('DischargingStatus', $totalOutput);
+        // Redundante Status-Variablen entfernt - Werte sind bereits in TotalInput/TotalOutput
 
         // Ausgangsstatus
         if (isset($status['acOutput'])) {
