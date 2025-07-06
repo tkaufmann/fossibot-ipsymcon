@@ -18,6 +18,10 @@ class FossibotDevice extends IPSModule
         $this->RegisterVariableInteger('BatterySOC', 'Ladezustand', '~Battery.100', 100);
         $this->RegisterVariableFloat('TotalInput', 'Eingangsleistung', '~Watt.3680', 110);
         $this->RegisterVariableFloat('TotalOutput', 'Ausgangsleistung', '~Watt.3680', 120);
+        
+        // Status-Variablen
+        $this->RegisterVariableBoolean('ChargingActive', 'Lädt gerade', '~Switch', 130);
+        $this->RegisterVariableBoolean('DischargingActive', 'Entlädt gerade', '~Switch', 140);
 
         // Ausgänge
         $this->RegisterVariableBoolean('ACOutput', 'AC Ausgang', '~Switch', 200);
@@ -228,12 +232,21 @@ class FossibotDevice extends IPSModule
         }
 
         // Eingangs-/Ausgangsleistung
+        $totalInput = 0;
+        $totalOutput = 0;
+        
         if (isset($status['totalInput'])) {
-            $this->SetValue('TotalInput', floatval($status['totalInput']));
+            $totalInput = floatval($status['totalInput']);
+            $this->SetValue('TotalInput', $totalInput);
         }
         if (isset($status['totalOutput'])) {
-            $this->SetValue('TotalOutput', floatval($status['totalOutput']));
+            $totalOutput = floatval($status['totalOutput']);
+            $this->SetValue('TotalOutput', $totalOutput);
         }
+        
+        // Lade-/Entlade-Status berechnen
+        $this->SetValue('ChargingActive', $totalInput > 0);
+        $this->SetValue('DischargingActive', $totalOutput > 0);
 
         // Ausgangsstatus
         if (isset($status['acOutput'])) {
