@@ -383,8 +383,29 @@ class FossibotDevice extends IPSModule
      */
     public function FBT_SetUSBOutput(bool $enabled)
     {
+        // Aktuelle Werte loggen
+        $soc = $this->GetValue('BatterySOC');
+        $dischargeLimit = $this->GetValue('DischargeLimit');
+        $this->LogMessage("USB-Schaltung: SOC=$soc%, DischargeLimit=$dischargeLimit%", KL_NOTIFY);
+        
+        // Prüfung: USB kann nicht eingeschaltet werden wenn SOC <= DischargeLimit
+        if ($enabled && $soc <= $dischargeLimit) {
+            $this->LogMessage("WARNUNG: USB kann nicht eingeschaltet werden - SOC ($soc%) ist <= DischargeLimit ($dischargeLimit%)", KL_WARNING);
+            return false;
+        }
+        
         $command = $enabled ? 'REGEnableUSBOutput' : 'REGDisableUSBOutput';
-        return $this->SendDeviceCommand($command, null);
+        $this->LogMessage("USB-Befehl: $command (enabled: " . ($enabled ? 'true' : 'false') . ')', KL_NOTIFY);
+        
+        $result = $this->SendDeviceCommand($command, null);
+        
+        if ($result) {
+            $this->LogMessage('USB-Befehl erfolgreich gesendet', KL_NOTIFY);
+        } else {
+            $this->LogMessage('USB-Befehl fehlgeschlagen', KL_ERROR);
+        }
+        
+        return $result;
     }
 
     /**
@@ -525,11 +546,13 @@ class FossibotDevice extends IPSModule
             $client->connectMqtt();
             
             // Befehl senden und gleichzeitig Status-Update anfordern (parallel!)
+            $this->LogMessage("Sende Befehl: $command mit Wert: " . json_encode($value), KL_DEBUG);
             $result = $client->sendCommand($deviceId, $command, $value);
             $client->requestDeviceSettings($deviceId); // Parallel Status anfordern!
             
             // Smart waiting für Response (max 3 Sekunden)
             $gotResponse = $client->waitForResponse(3.0);
+            $this->LogMessage('Response erhalten: ' . ($gotResponse ? 'JA' : 'NEIN'), KL_DEBUG);
             
             if ($gotResponse) {
                 $this->SetValue('ConnectionStatus', 'Online');
