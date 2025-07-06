@@ -399,9 +399,10 @@ class SydpowerClient {
     }
     
     public function sendCommand($deviceId, $command, $value = null) {
-        if (!$this->mqttConnected) {
-            throw new Exception("MQTT not connected. Call connectMqtt() first.");
-        }
+        return $this->apiCallWithRetry(function() use ($deviceId, $command, $value) {
+            if (!$this->mqttConnected) {
+                throw new Exception("MQTT not connected. Call connectMqtt() first.");
+            }
         
         // CRITICAL: Whitelist of safe commands to prevent device damage
         $safeCommands = [
@@ -504,6 +505,7 @@ class SydpowerClient {
             echo "Error sending command: " . $e->getMessage() . "\n";
             return ['error' => $e->getMessage()];
         }
+        }); // End of apiCallWithRetry
     }
     
     public function getDeviceStatus($deviceId) {
