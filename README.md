@@ -143,20 +143,24 @@ AC-Ausgang: On         (Bypass aktiv)
 
 ### Normal-Betrieb mit AC-Anschluss (UPS-Bypass)
 
+**Beispiel-Szenario:** 3D-Drucker am AC-Ausgang (100W), Drehregler auf 300W
+
 ```mermaid
 flowchart LR
-    AC[⚡ Netz 230V] -->|300W| Bypass[🔄 AC-Bypass]
-    AC -->|299W| Charger[🔋 Batterie-Lader]
+    AC[⚡ Netz 230V] -->|400W gesamt| Split[⚙️ Aufteiler]
     
-    Bypass -->|15W| ACOut[🔌 AC-Ausgang 3D-Drucker 15W]
+    Split -->|100W| Bypass[🔄 AC-Bypass]
+    Split -->|300W| Charger[🔋 Batterie-Lader]
     
-    Charger -->|299W| Battery[🔋 Batterie 2048Wh]
+    Bypass -->|100W| ACOut[🔌 AC-Ausgang Beispiel: 3D-Drucker 100W]
+    
+    Charger -->|300W| Battery[🔋 Batterie 2048Wh]
     
     Battery -.->|0W aus| DCOut[🔌 DC-Ausgang]
     Battery -.->|0W aus| USBOut[🔌 USB-Ausgang]
     
     %% MQTT Register Mapping
-    Charger -.->|totalInput=299W| MQTT1[📊 Batterie-Eingang]
+    Charger -.->|totalInput=300W| MQTT1[📊 Batterie-Eingang]
     DCOut -.->|totalOutput=0W| MQTT2[📊 Batterie-Ausgang]
     USBOut -.-> MQTT2
     
@@ -165,18 +169,21 @@ flowchart LR
     classDef device fill:#f3e5f5
     classDef mqtt fill:#e8f5e8
     classDef off fill:#ffebee,stroke-dasharray: 5 5
+    classDef control fill:#fff9c4
     
     class AC,Charger power
     class ACOut,DCOut,USBOut,Battery device
     class MQTT1,MQTT2 mqtt
     class DCOut,USBOut off
+    class Split control
 ```
 
 **Wichtige Erkenntnisse:**
-- 🔄 **AC-Bypass**: 3D-Drucker läuft direkt vom Netz (nicht über Batterie)
-- 📊 **Batterie-Eingang**: 299W = Netz-Input minus AC-Bypass-Verbrauch
-- 📊 **Batterie-Ausgang**: 0W = DC/USB sind aus, AC läuft über Bypass
-- 🔋 **Batterie**: Wird geladen, obwohl "Lädt gerade" = Off zeigt
+- 🔄 **AC-Bypass**: Verbraucher am AC-Ausgang laufen direkt vom Netz
+- ⚙️ **Drehregler**: Begrenzt Ladestrom auf 300W (von 400W Gesamt-Input)
+- 📊 **Batterie-Eingang**: 300W = Was tatsächlich zur Batterie fließt
+- 📊 **Batterie-Ausgang**: 0W = DC/USB aus, AC läuft über Bypass
+- 🔋 **Bypass-Verbrauch**: Erscheint NICHT in MQTT-Messwerten
 
 ### Solar-Betrieb ohne Netz
 
