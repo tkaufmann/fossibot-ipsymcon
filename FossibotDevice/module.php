@@ -30,10 +30,8 @@ class FossibotDevice extends IPSModule
         $this->CreateChargingCurrentProfile();
 
         // THEN: Register variables with profiles
-        // === STATUS & ÜBERSICHT ===
-        // Redundante Status-Variablen entfernen
-        @$this->UnregisterVariable('ChargingStatus');
-        @$this->UnregisterVariable('DischargingStatus');
+        // === CLEANUP: Alle veralteten Variablen entfernen ===
+        $this->CleanupOldVariables();
         
         // Force-Update für Label-Änderung
         @$this->UnregisterVariable('TotalInput');
@@ -728,6 +726,39 @@ class FossibotDevice extends IPSModule
         IPS_SetVariableProfileAssociation($profileName, 3, '3', '', 0x80FF00);
         IPS_SetVariableProfileAssociation($profileName, 4, '4', '', 0xFFFF00);
         IPS_SetVariableProfileAssociation($profileName, 5, '5', '', 0xFF8000);
+    }
+
+    /**
+     * Entfernt alle veralteten/irreführenden Variablen
+     */
+    private function CleanupOldVariables()
+    {
+        // Liste aller möglichen veralteten Variable-Idents
+        $oldVariables = [
+            'ChargingStatus',
+            'DischargingStatus', 
+            'Lädt gerade',
+            'Entlädt gerade',
+            'ChargingIndicator',
+            'DischargingIndicator'
+        ];
+        
+        foreach ($oldVariables as $ident) {
+            @$this->UnregisterVariable($ident);
+        }
+        
+        // Auch alle Variablen mit "gerade" im Namen finden und löschen
+        $allVars = IPS_GetChildrenIDs($this->InstanceID);
+        foreach ($allVars as $varID) {
+            if (IPS_GetObject($varID)['ObjectType'] == 2) { // 2 = Variable
+                $name = IPS_GetName($varID);
+                if (strpos($name, 'gerade') !== false || 
+                    strpos($name, 'Status') !== false && 
+                    (strpos($name, 'Lade') !== false || strpos($name, 'Entlade') !== false)) {
+                    @IPS_DeleteVariable($varID);
+                }
+            }
+        }
     }
 
     /**

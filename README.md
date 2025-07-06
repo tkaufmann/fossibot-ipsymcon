@@ -247,6 +247,8 @@ sequenceDiagram
 
 ### MQTT-Register-Mapping
 
+Meine Interpretation:
+
 ```mermaid
 graph TB
     subgraph "📡 MQTT Register (Modbus)"
@@ -335,21 +337,11 @@ Bit 11 = AC-Ausgang
 
 ## 🐛 Bekannte Probleme & Lösungen
 
-### "Keine Statusdaten empfangen"
-- **Ursache**: MQTT-Timeout oder Verbindungsproblem
-- **Lösung**: Update-Intervall erhöhen, "Jetzt aktualisieren" verwenden
-
 ### Token-Invalidierung / App-Logout
 - **Ursache**: Fossibot Mobile App und IP-Symcon teilen sich einen Account - nur eine aktive Session möglich
 - **Symptom**: Wirst aus der Mobile App ausgeloggt, wenn IP-Symcon Updates abruft
 - **Lösung**: 
-  - **Update-Intervall erhöhen** (empfohlen: 2-5 Minuten)
   - **Mobile App weniger nutzen** während IP-Symcon aktiv ist
-  - **Automatische Token-Erneuerung** funktioniert transparent
-
-### Falsche Output-Status
-- **Ursache**: Bit-Assignments waren in v1.0 falsch
-- **Lösung**: ✅ Behoben in aktueller Version (korrekte Bit-Zuordnung)
 
 ## 🎮 Steuerung über Skripte
 
