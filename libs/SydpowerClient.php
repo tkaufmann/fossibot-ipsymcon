@@ -298,6 +298,11 @@ class SydpowerClient {
             foreach ($deviceIds as $deviceId) {
                 $this->mqttClient->subscribe("{$deviceId}/device/response/state");
                 $this->mqttClient->subscribe("{$deviceId}/device/response/client/+");
+                // Extended subscriptions for error detection
+                $this->mqttClient->subscribe("{$deviceId}/device/error/+");
+                $this->mqttClient->subscribe("{$deviceId}/error/+");
+                $this->mqttClient->subscribe("{$deviceId}/+/error");
+                $this->mqttClient->subscribe("{$deviceId}/+");  // Catch-all for debugging
             }
             
             // Set up message handler
@@ -311,6 +316,22 @@ class SydpowerClient {
     }
     
     private function handleMqttMessage($topic, $payload) {
+        // DEBUG: Log ALL incoming MQTT messages
+        echo "🔄 MQTT Message received: Topic='$topic', Payload length=" . strlen($payload) . "\n";
+        
+        // Check for error topics or unusual topics
+        if (strpos($topic, 'error') !== false) {
+            echo "❌ ERROR TOPIC detected: $topic\n";
+            echo "Error payload: " . bin2hex($payload) . "\n";
+            return;
+        }
+        
+        if (!strpos($topic, '/device/response/state')) {
+            echo "⚠️  Non-standard topic: $topic\n";
+            echo "Payload (hex): " . bin2hex($payload) . "\n";
+            return;
+        }
+        
         $deviceMac = explode('/', $topic)[0];
         
         // Convert payload to array of integers
