@@ -631,8 +631,18 @@ class FossibotDevice extends IPSModule
         
         IPS_CreateVariableProfile($profileName, 1); // 1 = Integer
         IPS_SetVariableProfileText($profileName, '', '%');
-        IPS_SetVariableProfileValues($profileName, 60, 100, 5); // Min, Max, Step
         IPS_SetVariableProfileIcon($profileName, 'Battery');
+        
+        // Nur die erlaubten Werte als Associations
+        IPS_SetVariableProfileAssociation($profileName, 60, '60%', '', 0xFF0000);
+        IPS_SetVariableProfileAssociation($profileName, 65, '65%', '', 0xFF4000);
+        IPS_SetVariableProfileAssociation($profileName, 70, '70%', '', 0xFF8000);
+        IPS_SetVariableProfileAssociation($profileName, 75, '75%', '', 0xFFBF00);
+        IPS_SetVariableProfileAssociation($profileName, 80, '80%', '', 0xFFFF00);
+        IPS_SetVariableProfileAssociation($profileName, 85, '85%', '', 0xBFFF00);
+        IPS_SetVariableProfileAssociation($profileName, 90, '90%', '', 0x80FF00);
+        IPS_SetVariableProfileAssociation($profileName, 95, '95%', '', 0x40FF00);
+        IPS_SetVariableProfileAssociation($profileName, 100, '100%', '', 0x00FF00);
     }
 
     /**
@@ -649,8 +659,20 @@ class FossibotDevice extends IPSModule
         
         IPS_CreateVariableProfile($profileName, 1); // 1 = Integer
         IPS_SetVariableProfileText($profileName, '', '%');
-        IPS_SetVariableProfileValues($profileName, 0, 50, 5); // Min, Max, Step
         IPS_SetVariableProfileIcon($profileName, 'Battery');
+        
+        // Nur die erlaubten Werte als Associations
+        IPS_SetVariableProfileAssociation($profileName, 0, '0%', '', 0x00FF00);
+        IPS_SetVariableProfileAssociation($profileName, 5, '5%', '', 0x20FF00);
+        IPS_SetVariableProfileAssociation($profileName, 10, '10%', '', 0x40FF00);
+        IPS_SetVariableProfileAssociation($profileName, 15, '15%', '', 0x60FF00);
+        IPS_SetVariableProfileAssociation($profileName, 20, '20%', '', 0x80FF00);
+        IPS_SetVariableProfileAssociation($profileName, 25, '25%', '', 0xA0FF00);
+        IPS_SetVariableProfileAssociation($profileName, 30, '30%', '', 0xC0FF00);
+        IPS_SetVariableProfileAssociation($profileName, 35, '35%', '', 0xE0FF00);
+        IPS_SetVariableProfileAssociation($profileName, 40, '40%', '', 0xFFFF00);
+        IPS_SetVariableProfileAssociation($profileName, 45, '45%', '', 0xFFE000);
+        IPS_SetVariableProfileAssociation($profileName, 50, '50%', '', 0xFF0000);
     }
 
     /**
