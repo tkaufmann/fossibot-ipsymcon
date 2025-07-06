@@ -126,48 +126,12 @@ class FossibotDevice extends IPSModule
                 $this->FBT_ClearTokenCache();
                 break;
             case 'ChargingLimit':
-                // Validierung: Nur 60-100% in 5%-Schritten
-                if ($Value < 60 || $Value > 100 || $Value % 5 !== 0) {
-                    $this->LogMessage("Ungültiger Ladelimit-Wert: $Value (erlaubt: 60-100%, 5%-Schritte)", KL_WARNING);
-                    // Wert auf letzten gültigen Wert zurücksetzen
-                    $currentValue = $this->GetValue('ChargingLimit');
-                    if ($currentValue >= 60 && $currentValue <= 100) {
-                        $this->SetValue('ChargingLimit', $currentValue);
-                    } else {
-                        $this->SetValue('ChargingLimit', 80); // Standardwert
-                    }
-                    return;
-                }
                 $this->FBT_SetChargingLimit($Value);
                 break;
             case 'DischargeLimit':
-                // Validierung: Nur 0-50% in 5%-Schritten
-                if ($Value < 0 || $Value > 50 || $Value % 5 !== 0) {
-                    $this->LogMessage("Ungültiger Entladelimit-Wert: $Value (erlaubt: 0-50%, 5%-Schritte)", KL_WARNING);
-                    // Wert auf letzten gültigen Wert zurücksetzen
-                    $currentValue = $this->GetValue('DischargeLimit');
-                    if ($currentValue >= 0 && $currentValue <= 50) {
-                        $this->SetValue('DischargeLimit', $currentValue);
-                    } else {
-                        $this->SetValue('DischargeLimit', 20); // Standardwert
-                    }
-                    return;
-                }
                 $this->FBT_SetDischargeLimit($Value);
                 break;
             case 'MaxChargingCurrent':
-                // Validierung: Nur 1,5,10,15,20A
-                if (!in_array($Value, [1,5,10,15,20], true)) {
-                    $this->LogMessage("Ungültiger Ladestrom-Wert: $Value (erlaubt: 1,5,10,15,20A)", KL_WARNING);
-                    // Wert auf letzten gültigen Wert zurücksetzen
-                    $currentValue = $this->GetValue('MaxChargingCurrent');
-                    if (in_array($currentValue, [1,5,10,15,20], true)) {
-                        $this->SetValue('MaxChargingCurrent', $currentValue);
-                    } else {
-                        $this->SetValue('MaxChargingCurrent', 10); // Standardwert
-                    }
-                    return;
-                }
                 $this->FBT_SetMaxChargingCurrent($Value);
                 break;
             default:
@@ -633,16 +597,16 @@ class FossibotDevice extends IPSModule
         IPS_SetVariableProfileText($profileName, '', '%');
         IPS_SetVariableProfileIcon($profileName, 'Battery');
         
-        // Nur die erlaubten Werte als Associations
-        IPS_SetVariableProfileAssociation($profileName, 60, '60%', '', 0xFF0000);
-        IPS_SetVariableProfileAssociation($profileName, 65, '65%', '', 0xFF4000);
-        IPS_SetVariableProfileAssociation($profileName, 70, '70%', '', 0xFF8000);
-        IPS_SetVariableProfileAssociation($profileName, 75, '75%', '', 0xFFBF00);
-        IPS_SetVariableProfileAssociation($profileName, 80, '80%', '', 0xFFFF00);
-        IPS_SetVariableProfileAssociation($profileName, 85, '85%', '', 0xBFFF00);
-        IPS_SetVariableProfileAssociation($profileName, 90, '90%', '', 0x80FF00);
-        IPS_SetVariableProfileAssociation($profileName, 95, '95%', '', 0x40FF00);
-        IPS_SetVariableProfileAssociation($profileName, 100, '100%', '', 0x00FF00);
+        // Nur die erlaubten Werte als Associations (ohne % in Text)
+        IPS_SetVariableProfileAssociation($profileName, 60, '60', '', 0xFF0000);
+        IPS_SetVariableProfileAssociation($profileName, 65, '65', '', 0xFF4000);
+        IPS_SetVariableProfileAssociation($profileName, 70, '70', '', 0xFF8000);
+        IPS_SetVariableProfileAssociation($profileName, 75, '75', '', 0xFFBF00);
+        IPS_SetVariableProfileAssociation($profileName, 80, '80', '', 0xFFFF00);
+        IPS_SetVariableProfileAssociation($profileName, 85, '85', '', 0xBFFF00);
+        IPS_SetVariableProfileAssociation($profileName, 90, '90', '', 0x80FF00);
+        IPS_SetVariableProfileAssociation($profileName, 95, '95', '', 0x40FF00);
+        IPS_SetVariableProfileAssociation($profileName, 100, '100', '', 0x00FF00);
     }
 
     /**
@@ -661,18 +625,18 @@ class FossibotDevice extends IPSModule
         IPS_SetVariableProfileText($profileName, '', '%');
         IPS_SetVariableProfileIcon($profileName, 'Battery');
         
-        // Nur die erlaubten Werte als Associations
-        IPS_SetVariableProfileAssociation($profileName, 0, '0%', '', 0x00FF00);
-        IPS_SetVariableProfileAssociation($profileName, 5, '5%', '', 0x20FF00);
-        IPS_SetVariableProfileAssociation($profileName, 10, '10%', '', 0x40FF00);
-        IPS_SetVariableProfileAssociation($profileName, 15, '15%', '', 0x60FF00);
-        IPS_SetVariableProfileAssociation($profileName, 20, '20%', '', 0x80FF00);
-        IPS_SetVariableProfileAssociation($profileName, 25, '25%', '', 0xA0FF00);
-        IPS_SetVariableProfileAssociation($profileName, 30, '30%', '', 0xC0FF00);
-        IPS_SetVariableProfileAssociation($profileName, 35, '35%', '', 0xE0FF00);
-        IPS_SetVariableProfileAssociation($profileName, 40, '40%', '', 0xFFFF00);
-        IPS_SetVariableProfileAssociation($profileName, 45, '45%', '', 0xFFE000);
-        IPS_SetVariableProfileAssociation($profileName, 50, '50%', '', 0xFF0000);
+        // Nur die erlaubten Werte als Associations (ohne % in Text)
+        IPS_SetVariableProfileAssociation($profileName, 0, '0', '', 0x00FF00);
+        IPS_SetVariableProfileAssociation($profileName, 5, '5', '', 0x20FF00);
+        IPS_SetVariableProfileAssociation($profileName, 10, '10', '', 0x40FF00);
+        IPS_SetVariableProfileAssociation($profileName, 15, '15', '', 0x60FF00);
+        IPS_SetVariableProfileAssociation($profileName, 20, '20', '', 0x80FF00);
+        IPS_SetVariableProfileAssociation($profileName, 25, '25', '', 0xA0FF00);
+        IPS_SetVariableProfileAssociation($profileName, 30, '30', '', 0xC0FF00);
+        IPS_SetVariableProfileAssociation($profileName, 35, '35', '', 0xE0FF00);
+        IPS_SetVariableProfileAssociation($profileName, 40, '40', '', 0xFFFF00);
+        IPS_SetVariableProfileAssociation($profileName, 45, '45', '', 0xFFE000);
+        IPS_SetVariableProfileAssociation($profileName, 50, '50', '', 0xFF0000);
     }
 
     /**
@@ -691,12 +655,12 @@ class FossibotDevice extends IPSModule
         IPS_SetVariableProfileText($profileName, '', 'A');
         IPS_SetVariableProfileIcon($profileName, 'Electricity');
         
-        // Dropdown-Werte definieren
-        IPS_SetVariableProfileAssociation($profileName, 1, '1A', '', 0x00FF00);
-        IPS_SetVariableProfileAssociation($profileName, 5, '5A', '', 0x00FF00);
-        IPS_SetVariableProfileAssociation($profileName, 10, '10A', '', 0x00FF00);
-        IPS_SetVariableProfileAssociation($profileName, 15, '15A', '', 0xFFFF00);
-        IPS_SetVariableProfileAssociation($profileName, 20, '20A', '', 0xFF0000);
+        // Dropdown-Werte definieren (ohne A in Text)
+        IPS_SetVariableProfileAssociation($profileName, 1, '1', '', 0x00FF00);
+        IPS_SetVariableProfileAssociation($profileName, 5, '5', '', 0x00FF00);
+        IPS_SetVariableProfileAssociation($profileName, 10, '10', '', 0x00FF00);
+        IPS_SetVariableProfileAssociation($profileName, 15, '15', '', 0xFFFF00);
+        IPS_SetVariableProfileAssociation($profileName, 20, '20', '', 0xFF0000);
     }
 
     /**
