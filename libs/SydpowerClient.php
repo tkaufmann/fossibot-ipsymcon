@@ -326,10 +326,16 @@ class SydpowerClient {
             return;
         }
         
-        if (!strpos($topic, '/device/response/state')) {
+        // Check if this is a device response topic we can handle
+        if (!strpos($topic, '/device/response/state') && !strpos($topic, '/device/response/client/')) {
             echo "⚠️  Non-standard topic: $topic\n";
             echo "Payload (hex): " . bin2hex($payload) . "\n";
             return;
+        }
+        
+        // Special handling for client response topics (like client/04)
+        if (strpos($topic, '/device/response/client/')) {
+            echo "📡 Processing client response: $topic\n";
         }
         
         $deviceMac = explode('/', $topic)[0];
