@@ -19,6 +19,8 @@ class SydpowerClient {
     private $mqttClient;
     private $mqttConnected = false;
     private $tokenCache;
+    private $lastMqttResponse = null;
+    private $responseReceived = false;
     
     public function __construct($username = null, $password = null) {
         // Try to load from config if no credentials provided
@@ -316,6 +318,10 @@ class SydpowerClient {
     }
     
     private function handleMqttMessage($topic, $payload) {
+        // Mark that we received a response
+        $this->responseReceived = true;
+        $this->lastMqttResponse = ['topic' => $topic, 'payload' => $payload, 'time' => microtime(true)];
+        
         // DEBUG: Log ALL incoming MQTT messages
         echo "🔄 MQTT Message received: Topic='$topic', Payload length=" . strlen($payload) . "\n";
         
@@ -540,6 +546,41 @@ class SydpowerClient {
             return $this->devices[$deviceId];
         }
         return false;
+    }
+    
+    public function waitForResponse($timeout = 3.0) {
+        if (!$this->mqttConnected) {
+            return false;
+        }
+        
+        $this->responseReceived = false;
+        $start = microtime(true);
+        
+        // Poll in 200ms chunks
+        while ((microtime(true) - $start) < $timeout) {
+            $this->mqttClient->loop(0.2);
+            
+            if ($this->responseReceived) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    public function hasReceivedResponse() {
+        return $this->responseReceived;
+    }
+    
+    public function getLastResponse() {
+        return $this->lastMqttResponse;
+    }
+    
+    public function quickPing($deviceId) {
+        // Quick connectivity check with 1 second timeout
+        $this->responseReceived = false;
+        $this->sendCommand($deviceId, 'REGRequestSettings');
+        return $this->waitForResponse(1.0);
     }
     
     public function requestDeviceSettings($deviceId) {

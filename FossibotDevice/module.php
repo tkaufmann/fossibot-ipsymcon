@@ -59,8 +59,14 @@ class FossibotDevice extends IPSModule
         $interval = $this->ReadPropertyInteger('UpdateInterval');
         $this->SetTimerInterval('UpdateTimer', $interval * 1000);
         
-        // Erste Aktualisierung
-        $this->FBT_UpdateDeviceStatus();
+        // Nur beim ersten Mal (Create) oder wenn DeviceID geändert wurde, Status aktualisieren
+        // Nicht bei simplen Timer-Änderungen!
+        static $lastDeviceId = null;
+        if ($lastDeviceId === null || $lastDeviceId !== $deviceId) {
+            $lastDeviceId = $deviceId;
+            // Erste Aktualisierung
+            $this->FBT_UpdateDeviceStatus();
+        }
     }
 
     /**
@@ -459,25 +465,42 @@ class FossibotDevice extends IPSModule
             $devices = $client->getDevices();
             $client->connectMqtt();
             
-            // Befehl senden
+            // Befehl senden und gleichzeitig Status-Update anfordern (parallel!)
             $this->LogMessage("Sende Befehl: $command" . ($value !== null ? " mit Wert $value" : ""), KL_NOTIFY);
             $result = $client->sendCommand($deviceId, $command, $value);
-            $this->LogMessage("Befehl-Resultat: " . json_encode($result), KL_NOTIFY);
+            $client->requestDeviceSettings($deviceId); // Parallel Status anfordern!
             
-            // Check if command was successful (result is now an array)
-            $success = is_array($result) && isset($result['success']);
+            // Smart waiting für Response (max 3 Sekunden)
+            $gotResponse = $client->waitForResponse(3.0);
             
-            if ($success) {
+            if ($gotResponse) {
                 $valueText = $value !== null ? "($value)" : "";
-                $this->LogMessage("✅ $command$valueText erfolgreich gesendet", KL_NOTIFY);
+                $this->LogMessage("✅ $command$valueText - Gerät hat geantwortet", KL_NOTIFY);
+                $this->SetValue('ConnectionStatus', 'Online');
                 
-                // Nach Befehl kurz warten und Status aktualisieren
-                sleep(2);
-                $this->FBT_UpdateDeviceStatus();
+                // Kurz warten damit Status-Update verarbeitet wird
+                $client->listenForUpdates(0.5);
+                
+                // Jetzt sollten die neuen Werte da sein
+                $status = $client->getDeviceStatus($deviceId);
+                if ($status) {
+                    $this->ProcessStatusData($status);
+                    $this->SetValue('LastUpdate', time());
+                }
+                
+                $success = true;
             } else {
-                $valueText = $value !== null ? "($value)" : "";
-                $errorMsg = is_array($result) && isset($result['error']) ? $result['error'] : 'Unbekannter Fehler';
-                $this->LogMessage("❌ Fehler: $command$valueText - $errorMsg", KL_ERROR);
+                // Keine Response - Quick Ping um zu prüfen ob Gerät erreichbar
+                $this->LogMessage("⚠️ Keine Antwort auf Befehl - prüfe Erreichbarkeit...", KL_WARNING);
+                
+                if ($client->quickPing($deviceId)) {
+                    $this->LogMessage("⚠️ Gerät erreichbar, aber Befehl-Timeout", KL_WARNING);
+                    $this->SetValue('ConnectionStatus', 'Online - Befehl Timeout');
+                } else {
+                    $this->LogMessage("❌ Gerät nicht erreichbar (Offline/Standby)", KL_ERROR);
+                    $this->SetValue('ConnectionStatus', 'Gerät nicht erreichbar');
+                }
+                $success = false;
             }
             
             $client->disconnect();
