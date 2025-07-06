@@ -14,14 +14,18 @@ class FossibotDevice extends IPSModule
         $this->RegisterPropertyString('DeviceID', '');
         $this->RegisterPropertyInteger('UpdateInterval', 120);
 
+        // Custom Profile für Lade-/Entlade-Status erstellen
+        $this->CreateChargingStatusProfile();
+        $this->CreateDischargingStatusProfile();
+
         // Energie-Variablen
         $this->RegisterVariableInteger('BatterySOC', 'Ladezustand', '~Battery.100', 100);
         $this->RegisterVariableFloat('TotalInput', 'Eingangsleistung', '~Watt.3680', 110);
         $this->RegisterVariableFloat('TotalOutput', 'Ausgangsleistung', '~Watt.3680', 120);
         
-        // Status-Variablen
-        $this->RegisterVariableBoolean('ChargingActive', 'Lädt gerade', '~Switch', 130);
-        $this->RegisterVariableBoolean('DischargingActive', 'Entlädt gerade', '~Switch', 140);
+        // Status-Variablen mit Leistungsanzeige
+        $this->RegisterVariableFloat('ChargingStatus', 'Lade-Status', 'FBT.ChargingStatus', 130);
+        $this->RegisterVariableFloat('DischargingStatus', 'Entlade-Status', 'FBT.DischargingStatus', 140);
 
         // Ausgänge
         $this->RegisterVariableBoolean('ACOutput', 'AC Ausgang', '~Switch', 200);
@@ -244,9 +248,9 @@ class FossibotDevice extends IPSModule
             $this->SetValue('TotalOutput', $totalOutput);
         }
         
-        // Lade-/Entlade-Status berechnen
-        $this->SetValue('ChargingActive', $totalInput > 0);
-        $this->SetValue('DischargingActive', $totalOutput > 0);
+        // Lade-/Entlade-Status mit konkreter Leistung anzeigen
+        $this->SetValue('ChargingStatus', $totalInput);
+        $this->SetValue('DischargingStatus', $totalOutput);
 
         // Ausgangsstatus
         if (isset($status['acOutput'])) {
@@ -528,6 +532,36 @@ class FossibotDevice extends IPSModule
         } catch (Exception $e) {
             $this->LogMessage('Fehler beim Senden des Befehls: ' . $e->getMessage(), KL_ERROR);
             return false;
+        }
+    }
+
+    /**
+     * Erstellt Custom Profile für Lade-Status
+     */
+    private function CreateChargingStatusProfile()
+    {
+        $profileName = 'FBT.ChargingStatus';
+        
+        if (!IPS_VariableProfileExists($profileName)) {
+            IPS_CreateVariableProfile($profileName, 2); // 2 = Float
+            IPS_SetVariableProfileText($profileName, '', 'W');
+            IPS_SetVariableProfileDigits($profileName, 1);
+            IPS_SetVariableProfileIcon($profileName, 'Battery');
+        }
+    }
+
+    /**
+     * Erstellt Custom Profile für Entlade-Status  
+     */
+    private function CreateDischargingStatusProfile()
+    {
+        $profileName = 'FBT.DischargingStatus';
+        
+        if (!IPS_VariableProfileExists($profileName)) {
+            IPS_CreateVariableProfile($profileName, 2); // 2 = Float
+            IPS_SetVariableProfileText($profileName, '', 'W');
+            IPS_SetVariableProfileDigits($profileName, 1);
+            IPS_SetVariableProfileIcon($profileName, 'Electricity');
         }
     }
 
