@@ -267,7 +267,7 @@ $fossibotID = $instances[0]; // Erste gefundene Instanz
 ### v1.5 - Aktuell  
 - ✅ **Entladelimit 0% freigegeben** - Vollständige Kontrolle 0-50%
 - ✅ **11 Entladelimit-Buttons** - 0%, 5%, 10%, 15%, 20%, 25%, 30%, 35%, 40%, 45%, 50%
-- ✅ **Herstellerschutz vertraut** - 0% erlaubt, da Hersteller Tiefentladeschutz hat
+- ✅ **Erweiterte Entlade-Kontrolle** - Komplette Bandbreite verfügbar
 
 ### v1.4
 - ✅ **App-konforme Limits** - Ladelimit 60-100%, Entladelimit 5-50%
