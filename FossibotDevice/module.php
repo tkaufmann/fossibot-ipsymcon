@@ -462,7 +462,10 @@ class FossibotDevice extends IPSModule
             // Befehl senden
             $result = $client->sendCommand($deviceId, $command, $value);
             
-            if ($result) {
+            // Check if command was successful (result is now an array)
+            $success = is_array($result) && isset($result['success']);
+            
+            if ($success) {
                 $valueText = $value !== null ? "($value)" : "";
                 $this->LogMessage("$command$valueText gesendet", KL_DEBUG);
                 
@@ -471,11 +474,12 @@ class FossibotDevice extends IPSModule
                 $this->FBT_UpdateDeviceStatus();
             } else {
                 $valueText = $value !== null ? "($value)" : "";
-                $this->LogMessage("Fehler: $command$valueText", KL_ERROR);
+                $errorMsg = is_array($result) && isset($result['error']) ? $result['error'] : 'Unbekannter Fehler';
+                $this->LogMessage("Fehler: $command$valueText - $errorMsg", KL_ERROR);
             }
             
             $client->disconnect();
-            return $result;
+            return $success;
             
         } catch (Exception $e) {
             $this->LogMessage('Fehler beim Senden des Befehls: ' . $e->getMessage(), KL_ERROR);
