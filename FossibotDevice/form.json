@@ -43,6 +43,14 @@
         },
         {
             "type": "Label",
+            "caption": "🔌 Ausgänge"
+        },
+        {
+            "type": "Label",
+            "caption": "Hinweis: USB/DC-Ausgänge sind gesperrt wenn Ladezustand ≤ Entladelimit"
+        },
+        {
+            "type": "Label",
             "caption": "🔌 AC-Ausgang"
         },
         {
