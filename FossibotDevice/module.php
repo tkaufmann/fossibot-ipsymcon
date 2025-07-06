@@ -35,6 +35,10 @@ class FossibotDevice extends IPSModule
         @$this->UnregisterVariable('ChargingStatus');
         @$this->UnregisterVariable('DischargingStatus');
         
+        // Force-Update für Label-Änderung
+        @$this->UnregisterVariable('TotalInput');
+        @$this->UnregisterVariable('TotalOutput');
+        
         // Hauptvariablen ohne Kategorien (erstmal funktionierend)
         $this->RegisterVariableInteger('BatterySOC', 'Ladezustand', '~Battery.100', 100);
         $this->RegisterVariableFloat('TotalInput', 'Batterie-Eingang', '~Watt.3680', 110);
