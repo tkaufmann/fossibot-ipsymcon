@@ -30,7 +30,7 @@ class MqttWebSocketClient {
     }
     
     public function connect() {
-        echo "Connecting to MQTT WebSocket: ws://{$this->host}:{$this->port}{$this->path}\n";
+        // Connecting to MQTT WebSocket (silent)
         
         // Create WebSocket connection
         $context = stream_context_create();
@@ -73,7 +73,7 @@ class MqttWebSocketClient {
             throw new Exception("WebSocket handshake failed: " . $response);
         }
         
-        echo "WebSocket connected successfully\n";
+        // WebSocket connected successfully
         
         // Send MQTT CONNECT packet
         $this->sendMqttConnect();
@@ -82,7 +82,7 @@ class MqttWebSocketClient {
         $this->readMqttResponse();
         
         $this->connected = true;
-        echo "MQTT connected successfully\n";
+        // MQTT connected successfully
         
         return true;
     }
@@ -267,7 +267,7 @@ class MqttWebSocketClient {
         $packet = $fixedHeader . $payload;
         $this->sendWebSocketFrame($packet, 0x2);
         
-        echo "Subscribed to topic: $topic\n";
+        // Subscribed to topic: $topic
     }
     
     public function publish($topic, $message, $qos = 0) {
@@ -303,7 +303,7 @@ class MqttWebSocketClient {
         $mqttPacket = $fixedHeader . $packet;
         $this->sendWebSocketFrame($mqttPacket, 0x2);
         
-        echo "Published to topic: $topic (QoS $qos)\n";
+        // Published to topic: $topic (QoS $qos)
     }
     
     public function onMessage($callback) {
@@ -367,7 +367,7 @@ class MqttWebSocketClient {
             
             fclose($this->socket);
             $this->connected = false;
-            echo "MQTT disconnected\n";
+            // MQTT disconnected
         }
     }
     
