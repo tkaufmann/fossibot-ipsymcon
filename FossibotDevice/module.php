@@ -14,15 +14,22 @@ class FossibotDevice extends IPSModule
         $this->RegisterPropertyString('DeviceID', '');
         $this->RegisterPropertyInteger('UpdateInterval', 120);
 
-        // Custom Profile für Lade-/Entlade-Status erstellen
+        // Timer registrieren
+        $this->RegisterTimer('UpdateTimer', 0, 'IPS_RequestAction(' . $this->InstanceID . ', "TimerUpdate", true);');
+    }
+
+    public function ApplyChanges()
+    {
+        parent::ApplyChanges();
+
+        // FIRST: Create all custom profiles
         $this->CreateChargingStatusProfile();
         $this->CreateDischargingStatusProfile();
-        
-        // Custom Profile für Webfront-Steuerung erstellen
         $this->CreateChargingLimitProfile();
         $this->CreateDischargeLimitProfile();
         $this->CreateChargingCurrentProfile();
 
+        // THEN: Register variables with profiles
         // Energie-Variablen
         $this->RegisterVariableInteger('BatterySOC', 'Ladezustand', '~Battery.100', 100);
         $this->RegisterVariableFloat('TotalInput', 'Eingangsleistung', '~Watt.3680', 110);
@@ -48,14 +55,6 @@ class FossibotDevice extends IPSModule
         // Systemstatus
         $this->RegisterVariableInteger('LastUpdate', 'Letzte Aktualisierung', '~UnixTimestamp', 400);
         $this->RegisterVariableString('ConnectionStatus', 'Verbindungsstatus', '', 410);
-
-        // Timer registrieren
-        $this->RegisterTimer('UpdateTimer', 0, 'IPS_RequestAction(' . $this->InstanceID . ', "TimerUpdate", true);');
-    }
-
-    public function ApplyChanges()
-    {
-        parent::ApplyChanges();
 
         // Validierung
         $deviceId = $this->ReadPropertyString('DeviceID');
