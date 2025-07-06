@@ -460,14 +460,16 @@ class FossibotDevice extends IPSModule
             $client->connectMqtt();
             
             // Befehl senden
+            $this->LogMessage("Sende Befehl: $command" . ($value !== null ? " mit Wert $value" : ""), KL_NOTIFY);
             $result = $client->sendCommand($deviceId, $command, $value);
+            $this->LogMessage("Befehl-Resultat: " . json_encode($result), KL_NOTIFY);
             
             // Check if command was successful (result is now an array)
             $success = is_array($result) && isset($result['success']);
             
             if ($success) {
                 $valueText = $value !== null ? "($value)" : "";
-                $this->LogMessage("$command$valueText gesendet", KL_DEBUG);
+                $this->LogMessage("✅ $command$valueText erfolgreich gesendet", KL_NOTIFY);
                 
                 // Nach Befehl kurz warten und Status aktualisieren
                 sleep(2);
@@ -475,7 +477,7 @@ class FossibotDevice extends IPSModule
             } else {
                 $valueText = $value !== null ? "($value)" : "";
                 $errorMsg = is_array($result) && isset($result['error']) ? $result['error'] : 'Unbekannter Fehler';
-                $this->LogMessage("Fehler: $command$valueText - $errorMsg", KL_ERROR);
+                $this->LogMessage("❌ Fehler: $command$valueText - $errorMsg", KL_ERROR);
             }
             
             $client->disconnect();
