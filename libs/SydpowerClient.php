@@ -240,6 +240,12 @@ class SydpowerClient {
         $this->accessToken = $loginResponse['data']['token'];
         
         $mqttResponse = $this->apiRequest('mqtt', '{}', true);
+        
+        // Check if MQTT response has expected structure
+        if (!isset($mqttResponse['data']) || !isset($mqttResponse['data']['access_token'])) {
+            throw new Exception("Invalid MQTT token response: " . json_encode($mqttResponse));
+        }
+        
         $this->mqttAccessToken = $mqttResponse['data']['access_token'];
         
         // Cache the tokens

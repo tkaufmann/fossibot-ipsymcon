@@ -101,6 +101,9 @@ class FossibotDevice extends IPSModule
             case 'RequestSettings':
                 $this->FBT_RequestSettings();
                 break;
+            case 'ClearTokenCache':
+                $this->FBT_ClearTokenCache();
+                break;
             default:
                 parent::RequestAction($Ident, $Value);
                 break;
@@ -395,6 +398,35 @@ class FossibotDevice extends IPSModule
             
         } catch (Exception $e) {
             $this->LogMessage('Fehler beim Anfordern der Einstellungen: ' . $e->getMessage(), KL_ERROR);
+            return false;
+        }
+    }
+
+    /**
+     * Token-Cache leeren (bei Token-Problemen)
+     */
+    public function FBT_ClearTokenCache()
+    {
+        $credentials = $this->GetDiscoveryCredentials();
+        
+        if (!$credentials) {
+            $this->LogMessage('Keine Discovery-Instanz konfiguriert', KL_ERROR);
+            return false;
+        }
+        
+        try {
+            require_once __DIR__ . '/../libs/SydpowerClient.php';
+            
+            $client = new SydpowerClient($credentials['email'], $credentials['password']);
+            $client->clearTokenCache();
+            
+            $this->LogMessage('Token-Cache geleert - nächste Authentifizierung erfolgt neu', KL_NOTIFY);
+            $this->SetValue('ConnectionStatus', 'Token-Cache geleert');
+            
+            return true;
+            
+        } catch (Exception $e) {
+            $this->LogMessage('Fehler beim Leeren des Token-Cache: ' . $e->getMessage(), KL_ERROR);
             return false;
         }
     }

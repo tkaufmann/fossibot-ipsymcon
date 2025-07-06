@@ -258,6 +258,11 @@
             "type": "Button",
             "caption": "Einstellungen anfordern",
             "onClick": "IPS_RequestAction($id, 'RequestSettings', true);"
+        },
+        {
+            "type": "Button",
+            "caption": "Token-Cache leeren",
+            "onClick": "IPS_RequestAction($id, 'ClearTokenCache', true);"
         }
     ]
 }
