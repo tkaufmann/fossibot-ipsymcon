@@ -47,10 +47,24 @@ class FossibotDevice extends IPSModule
         // Ladelimits mit Webfront-Steuerung
         $this->RegisterVariableInteger('ChargingLimit', 'Ladelimit', 'FBT.ChargingLimit', 300);
         $this->EnableAction('ChargingLimit');
+        // Standardwert setzen falls Variable leer
+        if ($this->GetValue('ChargingLimit') == 0) {
+            $this->SetValue('ChargingLimit', 80);
+        }
+        
         $this->RegisterVariableInteger('DischargeLimit', 'Entladelimit', 'FBT.DischargeLimit', 310);
         $this->EnableAction('DischargeLimit');
+        // Standardwert setzen falls Variable leer
+        if ($this->GetValue('DischargeLimit') < 0) {
+            $this->SetValue('DischargeLimit', 20);
+        }
+        
         $this->RegisterVariableInteger('MaxChargingCurrent', 'Max. Ladestrom', 'FBT.ChargingCurrent', 320);
         $this->EnableAction('MaxChargingCurrent');
+        // Standardwert setzen falls Variable leer
+        if ($this->GetValue('MaxChargingCurrent') == 0) {
+            $this->SetValue('MaxChargingCurrent', 10);
+        }
 
         // Systemstatus
         $this->RegisterVariableInteger('LastUpdate', 'Letzte Aktualisierung', '~UnixTimestamp', 400);
@@ -590,7 +604,12 @@ class FossibotDevice extends IPSModule
         
         // Profile löschen falls vorhanden, um es neu zu erstellen
         if (IPS_VariableProfileExists($profileName)) {
-            IPS_DeleteVariableProfile($profileName);
+            try {
+                IPS_DeleteVariableProfile($profileName);
+            } catch (Exception $e) {
+                // Profile wird verwendet, nicht löschen
+                return;
+            }
         }
         
         IPS_CreateVariableProfile($profileName, 1); // 1 = Integer
@@ -618,7 +637,12 @@ class FossibotDevice extends IPSModule
         
         // Profile löschen falls vorhanden, um es neu zu erstellen
         if (IPS_VariableProfileExists($profileName)) {
-            IPS_DeleteVariableProfile($profileName);
+            try {
+                IPS_DeleteVariableProfile($profileName);
+            } catch (Exception $e) {
+                // Profile wird verwendet, nicht löschen
+                return;
+            }
         }
         
         IPS_CreateVariableProfile($profileName, 1); // 1 = Integer
@@ -648,7 +672,12 @@ class FossibotDevice extends IPSModule
         
         // Profile löschen falls vorhanden, um es neu zu erstellen
         if (IPS_VariableProfileExists($profileName)) {
-            IPS_DeleteVariableProfile($profileName);
+            try {
+                IPS_DeleteVariableProfile($profileName);
+            } catch (Exception $e) {
+                // Profile wird verwendet, nicht löschen
+                return;
+            }
         }
         
         IPS_CreateVariableProfile($profileName, 1); // 1 = Integer
