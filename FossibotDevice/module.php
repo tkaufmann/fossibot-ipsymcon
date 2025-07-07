@@ -364,25 +364,25 @@ class FossibotDevice extends IPSModule
     /**
      * AC-Ausgang ein-/ausschalten
      */
-    public function FBT_SetACOutput(bool $enabled)
+    public function FBT_SetACOutput(bool $enabled, bool $statusUpdate = true)
     {
         $command = $enabled ? 'REGEnableACOutput' : 'REGDisableACOutput';
-        return $this->SendDeviceCommand($command, null);
+        return $this->SendDeviceCommand($command, null, $statusUpdate);
     }
 
     /**
      * DC-Ausgang ein-/ausschalten
      */
-    public function FBT_SetDCOutput(bool $enabled)
+    public function FBT_SetDCOutput(bool $enabled, bool $statusUpdate = true)
     {
         $command = $enabled ? 'REGEnableDCOutput' : 'REGDisableDCOutput';
-        return $this->SendDeviceCommand($command, null);
+        return $this->SendDeviceCommand($command, null, $statusUpdate);
     }
 
     /**
      * USB-Ausgang ein-/ausschalten
      */
-    public function FBT_SetUSBOutput(bool $enabled)
+    public function FBT_SetUSBOutput(bool $enabled, bool $statusUpdate = true)
     {
         // Aktuelle Werte loggen
         $soc = $this->GetValue('BatterySOC');
@@ -398,7 +398,7 @@ class FossibotDevice extends IPSModule
         $command = $enabled ? 'REGEnableUSBOutput' : 'REGDisableUSBOutput';
         $this->LogMessage("USB-Befehl: $command (enabled: " . ($enabled ? 'true' : 'false') . ')', KL_NOTIFY);
         
-        $result = $this->SendDeviceCommand($command, null);
+        $result = $this->SendDeviceCommand($command, null, $statusUpdate);
         
         if ($result) {
             $this->LogMessage('USB-Befehl erfolgreich gesendet', KL_NOTIFY);
@@ -557,30 +557,6 @@ class FossibotDevice extends IPSModule
             
             if ($gotResponse) {
                 $this->SetValue('ConnectionStatus', 'Online');
-                
-                // Länger warten damit ALLE Status-Updates verarbeitet werden
-                $client->listenForUpdates(2.0);
-                
-                // Jetzt sollten die neuen Werte da sein
-                $status = $client->getDeviceStatus($deviceId);
-                
-                if ($status) {
-                    $this->ProcessStatusData($status);
-                    $this->SetValue('LastUpdate', time());
-                } else {
-                    // Fallback: Alle verfügbaren Device-IDs prüfen
-                    $allDeviceIds = $client->getDeviceIds();
-                    
-                    foreach ($allDeviceIds as $availableId) {
-                        $status = $client->getDeviceStatus($availableId);
-                        if ($status) {
-                            $this->ProcessStatusData($status);
-                            $this->SetValue('LastUpdate', time());
-                            break;
-                        }
-                    }
-                }
-                
                 $success = true;
             } else {
                 // Keine Response - Quick Ping um zu prüfen ob Gerät erreichbar
@@ -620,7 +596,13 @@ class FossibotDevice extends IPSModule
             'REGDischargeLowerLimit',
             'REGUSBStandbyTime',
             'REGACStandbyTime',
-            'REGDCStandbyTime'
+            'REGDCStandbyTime',
+            'REGEnableACOutput',
+            'REGDisableACOutput',
+            'REGEnableDCOutput', 
+            'REGDisableDCOutput',
+            'REGEnableUSBOutput',
+            'REGDisableUSBOutput'
         ];
         
         return in_array($command, $settingsCommands);

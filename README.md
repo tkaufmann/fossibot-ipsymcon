@@ -297,13 +297,29 @@ Bit 11 = AC-Ausgang
 ```
 
 ### Steuerung über Buttons
-- **AC/DC/USB Ein/Aus** - Direkte Ausgänge-Steuerung
+- **AC/DC/USB Ein/Aus** - Direkte Ausgänge-Steuerung mit Auto-Update
 - **Ladestrom** - 1A, 2A, 3A, 4A, 5A Buttons (angepasst für F2400)
 - **Ladelimit** - 60%, 65%, 70%, 75%, 80%, 85%, 90%, 95%, 100% Buttons
 - **Entladelimit** - 0%, 5%, 10%, 15%, 20%, 25%, 30%, 35%, 40%, 45%, 50% Buttons
 - **"Jetzt aktualisieren"** - Sofortige Datenabfrage
 - **"Geräteinformationen"** - Debug-Informationen
 - **"Einstellungen anfordern"** - Aktuelle Geräteeinstellungen abrufen
+
+### Auto-Refresh System
+**Alle Steuerbefehle lösen automatische Status-Updates aus:**
+- ✅ **Sofortiger UI-Update** nach Befehlsausführung
+- ⏱️ **2 Sekunden Wartezeit** für F2400-interne Verarbeitung
+- 🔄 **Automatische Neuabfrage** der aktuellen Gerätedaten
+- 📱 **WebFrontend-Synchronisation** ohne manuelles "Jetzt aktualisieren"
+
+**Für Scripts deaktivierbar:**
+```php
+// Mit Auto-Refresh (Standard)
+FBT_SetChargingLimit(80);
+
+// Ohne Auto-Refresh (Performance)
+FBT_SetChargingLimit(80, false);
+```
 
 ## 🔐 Sicherheit
 
