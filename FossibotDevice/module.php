@@ -412,7 +412,7 @@ class FossibotDevice extends IPSModule
     /**
      * Ladelimit setzen (60-100%)
      */
-    public function FBT_SetChargingLimit(int $percent)
+    public function FBT_SetChargingLimit(int $percent, bool $statusUpdate = true)
     {
         if ($percent < 60 || $percent > 100) {
             $this->LogMessage('Ladelimit muss zwischen 60-100% liegen', KL_ERROR);
@@ -420,39 +420,39 @@ class FossibotDevice extends IPSModule
         }
         
         $promille = $percent * 10; // Konvertierung zu Promille
-        return $this->SendDeviceCommand('REGChargeUpperLimit', $promille);
+        return $this->SendDeviceCommand('REGChargeUpperLimit', $promille, $statusUpdate);
     }
 
     /**
      * Maximalen Ladestrom setzen (1-5A für F2400)
      */
-    public function FBT_SetMaxChargingCurrent(int $ampere)
+    public function FBT_SetMaxChargingCurrent(int $ampere, bool $statusUpdate = true)
     {
         if ($ampere < 1 || $ampere > 5) {
             $this->LogMessage('Ladestrom muss zwischen 1-5A liegen (F2400 max 1100W AC)', KL_ERROR);
             return false;
         }
         
-        return $this->SendDeviceCommand('REGMaxChargeCurrent', $ampere);
+        return $this->SendDeviceCommand('REGMaxChargeCurrent', $ampere, $statusUpdate);
     }
 
     /**
      * Lade-Timer setzen (in Minuten)
      */
-    public function FBT_SetChargeTimer(int $minutes)
+    public function FBT_SetChargeTimer(int $minutes, bool $statusUpdate = true)
     {
         if ($minutes < 0) {
             $this->LogMessage('Lade-Timer muss positiv sein', KL_ERROR);
             return false;
         }
         
-        return $this->SendDeviceCommand('REGStopChargeAfter', $minutes);
+        return $this->SendDeviceCommand('REGStopChargeAfter', $minutes, $statusUpdate);
     }
 
     /**
      * Entladelimit setzen (0-50%)
      */
-    public function FBT_SetDischargeLimit(int $percent)
+    public function FBT_SetDischargeLimit(int $percent, bool $statusUpdate = true)
     {
         if ($percent < 0 || $percent > 50) {
             $this->LogMessage('Entladelimit muss zwischen 0-50% liegen', KL_ERROR);
@@ -460,7 +460,7 @@ class FossibotDevice extends IPSModule
         }
         
         $promille = $percent * 10; // Konvertierung zu Promille
-        return $this->SendDeviceCommand('REGDischargeLowerLimit', $promille);
+        return $this->SendDeviceCommand('REGDischargeLowerLimit', $promille, $statusUpdate);
     }
 
 
@@ -526,7 +526,7 @@ class FossibotDevice extends IPSModule
     /**
      * Befehl an das Gerät senden
      */
-    private function SendDeviceCommand(string $command, $value)
+    private function SendDeviceCommand(string $command, $value, bool $autoRefresh = true)
     {
         $deviceId = $this->ReadPropertyString('DeviceID');
         $credentials = $this->GetDiscoveryCredentials();
@@ -593,12 +593,37 @@ class FossibotDevice extends IPSModule
             }
             
             $client->disconnect();
+            
+            // Auto-Refresh nach Settings-Befehlen (für sofortige UI-Updates)
+            if ($success && $autoRefresh && $this->isSettingsCommand($command)) {
+                sleep(2); // F2400 braucht Zeit um Wert zu übernehmen
+                $this->FBT_UpdateDeviceStatus();
+            }
+            
             return $success;
             
         } catch (Exception $e) {
             $this->LogMessage('Fehler beim Senden des Befehls: ' . $e->getMessage(), KL_ERROR);
             return false;
         }
+    }
+    
+    /**
+     * Prüft ob Befehl Settings-Änderungen betrifft (braucht Auto-Refresh)
+     */
+    private function isSettingsCommand(string $command): bool
+    {
+        $settingsCommands = [
+            'REGChargeUpperLimit',
+            'REGMaxChargeCurrent', 
+            'REGStopChargeAfter',
+            'REGDischargeLowerLimit',
+            'REGUSBStandbyTime',
+            'REGACStandbyTime',
+            'REGDCStandbyTime'
+        ];
+        
+        return in_array($command, $settingsCommands);
     }
 
     /**
