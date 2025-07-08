@@ -267,6 +267,8 @@ class FossibotDevice extends IPSModule
      */
     private function ProcessStatusData($status)
     {
+        // KOMPLETTE MQTT-RESPONSE LOGGEN
+        $this->LogMessage('MQTT-RESPONSE KOMPLETT: ' . json_encode($status, JSON_PARTIAL_OUTPUT_ON_ERROR), KL_NOTIFY);
         // Entfernt: Zu viel Debug-Output
         
         // Der SydpowerClient speichert die Daten in diesem Format:
