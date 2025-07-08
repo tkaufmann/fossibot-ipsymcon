@@ -414,13 +414,21 @@ class FossibotDevice extends IPSModule
      */
     public function FBT_SetChargingLimit(int $percent, bool $statusUpdate = true)
     {
+        $this->LogMessage("LADELIMIT-DEBUG: Setze Ladelimit von {$percent}% (statusUpdate: " . ($statusUpdate ? 'true' : 'false') . ")", KL_NOTIFY);
+        
         if ($percent < 60 || $percent > 100) {
             $this->LogMessage('Ladelimit muss zwischen 60-100% liegen', KL_ERROR);
             return false;
         }
         
         $promille = $percent * 10; // Konvertierung zu Promille
-        return $this->SendDeviceCommand('REGChargeUpperLimit', $promille, $statusUpdate);
+        $this->LogMessage("LADELIMIT-DEBUG: Konvertiert zu Promille: {$promille}", KL_NOTIFY);
+        
+        $result = $this->SendDeviceCommand('REGChargeUpperLimit', $promille, $statusUpdate);
+        
+        $this->LogMessage("LADELIMIT-DEBUG: SendDeviceCommand Ergebnis: " . ($result ? 'true' : 'false'), KL_NOTIFY);
+        
+        return $result;
     }
 
     /**
