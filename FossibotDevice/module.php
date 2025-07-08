@@ -310,6 +310,9 @@ class FossibotDevice extends IPSModule
         if (isset($status['acChargingUpperLimit'])) {
             $chargingLimit = round($status['acChargingUpperLimit'] / 10);
             $this->SetValue('ChargingLimit', $chargingLimit);
+            $this->LogMessage('LADELIMIT-RESPONSE: F2400 meldet acChargingUpperLimit=' . $status['acChargingUpperLimit'] . ' Promille = ' . $chargingLimit . '%', KL_NOTIFY);
+        } else {
+            $this->LogMessage('LADELIMIT-RESPONSE: acChargingUpperLimit NICHT in Status-Daten enthalten!', KL_WARNING);
         }
         if (isset($status['dischargeLowerLimit'])) {
             $dischargeLimit = round($status['dischargeLowerLimit'] / 10);
