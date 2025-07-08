@@ -581,9 +581,17 @@ class FossibotDevice extends IPSModule
                 $success = false;
             }
             
+            // Auto-Refresh nach Settings-Befehlen (für sofortige UI-Updates)
+            if ($success && $autoRefresh && $this->isSettingsCommand($command)) {
+                // Settings-Befehle brauchen zusätzlichen REGRequestSettings
+                $this->LogMessage('AUTO-REFRESH: Sende zusätzlichen REGRequestSettings für Settings-Update', KL_NOTIFY);
+                $client->sendCommand($deviceId, 'REGRequestSettings', null);
+                $client->listenForUpdates(3); // Etwas länger warten für Settings
+            }
+            
             $client->disconnect();
             
-            // Auto-Refresh nach Settings-Befehlen (für sofortige UI-Updates)
+            // Separater UpdateDeviceStatus nach Settings-Befehlen
             if ($success && $autoRefresh && $this->isSettingsCommand($command)) {
                 sleep(2); // F2400 braucht Zeit um Wert zu übernehmen
                 $this->FBT_UpdateDeviceStatus();
