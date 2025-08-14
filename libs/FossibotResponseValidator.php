@@ -24,12 +24,12 @@ class FossibotResponseValidator {
             'REGEnableDCOutput' => array(
                 'fields' => array('dcOutput', 'maximumChargingCurrent'),
                 'validateType' => 'dcOn',
-                'timeout' => 2000
+                'timeout' => 4500  // DC braucht länger zum Schalten
             ),
             'REGDisableDCOutput' => array(
                 'fields' => array('dcOutput', 'maximumChargingCurrent'),
                 'validateType' => 'dcOff',
-                'timeout' => 2000
+                'timeout' => 4500  // DC OFF braucht bis zu 4s
             ),
             'REGEnableUSBOutput' => array(
                 'fields' => array('usbOutput', 'maximumChargingCurrent'),
