@@ -99,7 +99,7 @@ class SydpowerClient {
         return $signature;
     }
     
-    private function apiRequest($route, $params = '{}', $useToken = false) {
+    public function apiRequest($route, $params = '{}', $useToken = false) {
         $method = "serverless.function.runtime.invoke";
         $clientInfo = $this->generateClientInfo();
         
@@ -359,6 +359,9 @@ class SydpowerClient {
             $this->updateDeviceStatus04($deviceMac, $registers);
         } elseif (count($registers) == 81 && strpos($topic, 'device/response/client/data') !== false) {
             $this->updateDeviceStatusData($deviceMac, $registers);
+        } elseif (count($registers) >= 57) {
+            // Handle partial updates or other response types
+            $this->updateDeviceStatusPartial($deviceMac, $registers, $topic);
         }
     }
     
@@ -378,6 +381,21 @@ class SydpowerClient {
         $this->devices[$deviceMac]['usbOutput'] = $activeOutputs[9] == '1';   // Bit[9] = USB  
         $this->devices[$deviceMac]['dcOutput'] = $activeOutputs[10] == '1';   // Bit[10] = DC
         $this->devices[$deviceMac]['ledOutput'] = $activeOutputs[3] == '1';
+        
+        // WICHTIG: Auch Settings-Register aus /client/04 extrahieren
+        // Da wir nie /client/data bekommen, müssen wir alles aus /client/04 nehmen
+        if (count($registers) >= 68) {
+            $this->devices[$deviceMac]['maximumChargingCurrent'] = $registers[20];
+            $this->devices[$deviceMac]['acSilentCharging'] = ($registers[57] ?? 0) == 1;
+            $this->devices[$deviceMac]['usbStandbyTime'] = $registers[59] ?? null;
+            $this->devices[$deviceMac]['acStandbyTime'] = $registers[60] ?? null;
+            $this->devices[$deviceMac]['dcStandbyTime'] = $registers[61] ?? null;
+            $this->devices[$deviceMac]['screenRestTime'] = $registers[62] ?? null;
+            $this->devices[$deviceMac]['stopChargeAfter'] = $registers[63] ?? null;
+            $this->devices[$deviceMac]['dischargeLowerLimit'] = isset($registers[66]) ? $registers[66] : null;
+            $this->devices[$deviceMac]['acChargingUpperLimit'] = isset($registers[67]) ? $registers[67] : null;
+            $this->devices[$deviceMac]['wholeMachineUnusedTime'] = $registers[68] ?? null;
+        }
         
         // Status update processed silently
     }
@@ -399,6 +417,37 @@ class SydpowerClient {
         $this->devices[$deviceMac]['wholeMachineUnusedTime'] = $registers[68];
         
         // Settings update processed silently
+    }
+    
+    private function updateDeviceStatusPartial($deviceMac, $registers, $topic) {
+        if (!isset($this->devices[$deviceMac])) {
+            $this->devices[$deviceMac] = [];
+        }
+        
+        // Log the topic to understand what we're getting
+        echo "DEBUG: Partial update from topic: $topic with " . count($registers) . " registers\n";
+        
+        // Always update SOC if available
+        if (count($registers) >= 57) {
+            $this->devices[$deviceMac]['soc'] = round(($registers[56] / 1000) * 100, 1);
+        }
+        
+        // Check if this might contain settings data
+        if (count($registers) >= 68) {
+            // Try to extract settings (similar to Home Assistant data topic)
+            $this->devices[$deviceMac]['maximumChargingCurrent'] = $registers[20] ?? null;
+            $this->devices[$deviceMac]['acSilentCharging'] = ($registers[57] ?? 0) == 1;
+            $this->devices[$deviceMac]['usbStandbyTime'] = $registers[59] ?? null;
+            $this->devices[$deviceMac]['acStandbyTime'] = $registers[60] ?? null;
+            $this->devices[$deviceMac]['dcStandbyTime'] = $registers[61] ?? null;
+            $this->devices[$deviceMac]['screenRestTime'] = $registers[62] ?? null;
+            $this->devices[$deviceMac]['stopChargeAfter'] = $registers[63] ?? null;
+            $this->devices[$deviceMac]['dischargeLowerLimit'] = isset($registers[66]) ? ($registers[66] / 10) : null;
+            $this->devices[$deviceMac]['acChargingUpperLimit'] = isset($registers[67]) ? ($registers[67] / 10) : null;
+            $this->devices[$deviceMac]['wholeMachineUnusedTime'] = $registers[68] ?? null;
+            
+            echo "DEBUG: Extracted charge limit: " . ($this->devices[$deviceMac]['acChargingUpperLimit'] ?? 'null') . "\n";
+        }
     }
     
     public function getDeviceIds() {
@@ -485,6 +534,26 @@ class SydpowerClient {
                 case 'REGDisableACOutput':
                     $modbusMessage = ModbusHelper::getACOutputCommand(false);
                     break;
+                    
+                // Add dynamic command support (like Home Assistant)
+                default:
+                    // Check if it's a dynamic write command
+                    if (strpos($command, 'set_') === 0 && $value !== null) {
+                        // Extract register name from command
+                        // e.g., 'set_charging_current' -> REGISTER_MAXIMUM_CHARGING_CURRENT
+                        if ($command === 'set_charging_current') {
+                            $modbusMessage = ModbusHelper::getWriteModbus(
+                                ModbusHelper::REGISTER_MODBUS_ADDRESS,
+                                ModbusHelper::REGISTER_MAXIMUM_CHARGING_CURRENT,
+                                $value
+                            );
+                        } else {
+                            throw new Exception("Unknown dynamic command: {$command}");
+                        }
+                    } else {
+                        throw new Exception("Unknown command: {$command}");
+                    }
+                    break;
             }
             
             if ($modbusMessage === null) {
@@ -518,12 +587,35 @@ class SydpowerClient {
         $this->responseReceived = false;
         $start = microtime(true);
         
-        // Poll in 200ms chunks
+        // Poll in 100ms chunks für bessere Responsivität
         while ((microtime(true) - $start) < $timeout) {
-            $this->mqttClient->loop(0.2);
+            $this->mqttClient->loop(0.1);
             
             if ($this->responseReceived) {
                 return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    public function waitForSettingsResponse($timeout = 2.0) {
+        if (!$this->mqttConnected) {
+            return false;
+        }
+        
+        $start = microtime(true);
+        $initialDataState = $this->devices;
+        
+        // Warte spezifisch auf Settings-Updates (acChargingUpperLimit etc.)
+        while ((microtime(true) - $start) < $timeout) {
+            $this->mqttClient->loop(0.1);
+            
+            // Prüfe ob Settings-Daten angekommen sind
+            foreach ($this->devices as $deviceId => $data) {
+                if (isset($data['acChargingUpperLimit']) || isset($data['dischargeLowerLimit'])) {
+                    return true; // Settings Response erhalten
+                }
             }
         }
         

@@ -42,6 +42,7 @@ data/
 scripts/
 
 # Test und Entwicklung
+tests/
 test-output/
 coverage/
 phpunit.xml.local

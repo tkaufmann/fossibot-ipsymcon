@@ -12,7 +12,7 @@ class FossibotDevice extends IPSModule
 
         // Properties
         $this->RegisterPropertyString('DeviceID', '');
-        $this->RegisterPropertyInteger('UpdateInterval', 120);
+        $this->RegisterPropertyInteger('UpdateInterval', 30); // Optimaler Keep-Alive Interval
 
         // Timer registrieren
         $this->RegisterTimer('UpdateTimer', 0, 'IPS_RequestAction(' . $this->InstanceID . ', "TimerUpdate", true);');
@@ -118,7 +118,8 @@ class FossibotDevice extends IPSModule
                 $this->LogMessage('Geräteinformationen: ' . $info, KL_NOTIFY);
                 break;
             case 'TimerUpdate':
-                $this->LogMessage('Timer-Update ausgeführt', KL_DEBUG);
+                $this->LogMessage('Keep-Alive Timer-Update ausgeführt', KL_DEBUG);
+                // Keep-Alive Update: Verhindert dass F2400 in Schlafmodus geht
                 $this->FBT_UpdateDeviceStatus();
                 break;
             case 'SetACOutput':
@@ -308,15 +309,15 @@ class FossibotDevice extends IPSModule
             $this->SetValue('USBOutput', $status['usbOutput'] ? true : false);
         }
 
-        // Ladelimits (Werte sind in Promille, durch 10 teilen für Prozent)
-        if (isset($status['acChargingUpperLimit'])) {
+        // Ladelimits (Werte sind bereits in Promille, durch 10 teilen für Prozent)
+        if (isset($status['acChargingUpperLimit']) && $status['acChargingUpperLimit'] > 0) {
             $chargingLimit = round($status['acChargingUpperLimit'] / 10);
             $this->SetValue('ChargingLimit', $chargingLimit);
             $this->LogMessage('LADELIMIT-RESPONSE: F2400 meldet acChargingUpperLimit=' . $status['acChargingUpperLimit'] . ' Promille = ' . $chargingLimit . '%', KL_NOTIFY);
         } else {
-            $this->LogMessage('LADELIMIT-RESPONSE: acChargingUpperLimit NICHT in Status-Daten enthalten!', KL_WARNING);
+            $this->LogMessage('LADELIMIT-RESPONSE: acChargingUpperLimit NICHT in Status-Daten enthalten oder 0!', KL_WARNING);
         }
-        if (isset($status['dischargeLowerLimit'])) {
+        if (isset($status['dischargeLowerLimit']) && $status['dischargeLowerLimit'] > 0) {
             $dischargeLimit = round($status['dischargeLowerLimit'] / 10);
             $this->SetValue('DischargeLimit', $dischargeLimit);
         }
@@ -330,8 +331,8 @@ class FossibotDevice extends IPSModule
      */
     public function FBT_SetUpdateInterval(int $seconds)
     {
-        if ($seconds < 10) {
-            $this->LogMessage('Aktualisierungsintervall muss mindestens 10 Sekunden betragen', KL_WARNING);
+        if ($seconds < 30) {
+            $this->LogMessage('Aktualisierungsintervall muss mindestens 30 Sekunden betragen (Keep-Alive für F2400)', KL_WARNING);
             return false;
         }
 
@@ -564,8 +565,8 @@ class FossibotDevice extends IPSModule
             $result = $client->sendCommand($deviceId, $command, $value);
             $client->requestDeviceSettings($deviceId); // Parallel Status anfordern!
             
-            // Smart waiting für Response (max 3 Sekunden)
-            $gotResponse = $client->waitForResponse(3.0);
+            // Smart waiting für Response (reduziert auf 1.5s)
+            $gotResponse = $client->waitForResponse(1.5);
             $this->LogMessage('Response erhalten: ' . ($gotResponse ? 'JA' : 'NEIN'), KL_DEBUG);
             
             if ($gotResponse) {
@@ -581,20 +582,36 @@ class FossibotDevice extends IPSModule
                 $success = false;
             }
             
-            // Auto-Refresh nach Settings-Befehlen (für sofortige UI-Updates)
+            // Event-driven Settings-Update (viel schneller als vorher)
             if ($success && $autoRefresh && $this->isSettingsCommand($command)) {
-                // Settings-Befehle brauchen zusätzlichen REGRequestSettings
-                $this->LogMessage('AUTO-REFRESH: Sende zusätzlichen REGRequestSettings für Settings-Update', KL_NOTIFY);
+                $this->LogMessage('FAST-SETTINGS: Warte auf Settings-Response...', KL_NOTIFY);
                 $client->sendCommand($deviceId, 'REGRequestSettings', null);
-                $client->listenForUpdates(3); // Etwas länger warten für Settings
+                
+                // Warte spezifisch auf Settings statt generic Response
+                $gotSettings = $client->waitForSettingsResponse(1.5);
+                if ($gotSettings) {
+                    $this->LogMessage('✅ Settings-Response in < 1.5s erhalten!', KL_NOTIFY);
+                } else {
+                    $this->LogMessage('⏱️ Settings-Timeout nach 1.5s', KL_DEBUG);
+                }
             }
             
             $client->disconnect();
             
-            // Separater UpdateDeviceStatus nach Settings-Befehlen
+            // Event-driven Update: Direkt die MQTT-Response nutzen statt separater Verbindung
             if ($success && $autoRefresh && $this->isSettingsCommand($command)) {
-                sleep(2); // F2400 braucht Zeit um Wert zu übernehmen
-                $this->FBT_UpdateDeviceStatus();
+                // Aktuellen Status aus der bestehenden MQTT-Verbindung lesen
+                $newStatus = $client->getDeviceStatus($deviceId);
+                if ($newStatus && !empty($newStatus)) {
+                    $this->ProcessStatusData($newStatus);
+                    $this->SetValue('LastUpdate', time());
+                    $this->LogMessage('FAST-UPDATE: Status direkt aus MQTT-Response aktualisiert', KL_DEBUG);
+                } else {
+                    // Fallback nur wenn keine Response
+                    $this->LogMessage('FALLBACK: Keine direkte Response, warte kurz...', KL_DEBUG);
+                    sleep(1); // Nur 1s statt 2s
+                    $this->FBT_UpdateDeviceStatus();
+                }
             }
             
             return $success;

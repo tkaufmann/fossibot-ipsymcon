@@ -21,7 +21,10 @@ class MqttWebSocketClient {
         $this->host = $host;
         $this->port = $port;
         $this->path = $path;
-        $this->clientId = 'php_client_' . bin2hex(random_bytes(8));
+        // Use Home Assistant compatible client ID format: client_[24-hex]_[timestamp_ms]
+        $hexString = bin2hex(random_bytes(12)); // 12 bytes = 24 hex chars
+        $timestampMs = round(microtime(true) * 1000); // Current time in milliseconds
+        $this->clientId = 'client_' . $hexString . '_' . $timestampMs;
     }
     
     public function setCredentials($username, $password) {
@@ -99,7 +102,7 @@ class MqttWebSocketClient {
             }
         }
         
-        $keepAlive = 60;
+        $keepAlive = 30; // Home Assistant compatible keepalive (30 seconds)
         
         // Build CONNECT packet
         $payload = '';
