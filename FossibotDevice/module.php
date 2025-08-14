@@ -470,21 +470,26 @@ class FossibotDevice extends IPSModule
      */
     public function FBT_SetChargingLimit(int $percent, bool $statusUpdate = true)
     {
-        $this->LogMessage("LADELIMIT-DEBUG: Setze Ladelimit von {$percent}% (statusUpdate: " . ($statusUpdate ? 'true' : 'false') . ")", KL_NOTIFY);
-        
         if ($percent < 60 || $percent > 100) {
             $this->LogMessage('Ladelimit muss zwischen 60-100% liegen', KL_ERROR);
             $this->SetValue('ConnectionStatus', 'Fehler: Ungültiger Wert (60-100%)');
             return false;
         }
         
-        $this->SetValue('ConnectionStatus', "Setze Ladelimit auf {$percent}%...");
+        // Status anzeigen
+        $this->SetValue('ConnectionStatus', "Ändere Ladelimit auf {$percent}%...");
+        $this->LogMessage("Setze Ladelimit auf {$percent}%", KL_NOTIFY);
+        
         $promille = $percent * 10; // Konvertierung zu Promille
-        $this->LogMessage("LADELIMIT-DEBUG: Konvertiert zu Promille: {$promille}", KL_NOTIFY);
         
-        $result = $this->SendDeviceCommand('REGChargeUpperLimit', $promille, $statusUpdate);
+        // Command senden OHNE auto-refresh (false)
+        $result = $this->SendDeviceCommand('REGChargeUpperLimit', $promille, false);
         
-        $this->LogMessage("LADELIMIT-DEBUG: SendDeviceCommand Ergebnis: " . ($result ? 'true' : 'false'), KL_NOTIFY);
+        if ($result) {
+            // Timer temporär auf 3s verkürzen für schnelles Update
+            $this->SetTimerInterval('UpdateTimer', 3000);
+            $this->LogMessage("Timer auf 3s gesetzt für Ladelimit-Update", KL_DEBUG);
+        }
         
         return $result;
     }
