@@ -603,8 +603,8 @@ class FossibotDevice extends IPSModule
             
             $client->disconnect();
             
-            // Event-driven Update: Direkt die MQTT-Response nutzen statt separater Verbindung
-            if ($success && $autoRefresh && $this->isSettingsCommand($command)) {
+            // Event-driven Update: Nach ALLEN erfolgreichen Befehlen Status aktualisieren
+            if ($success && $autoRefresh) {
                 // Aktuellen Status aus der bestehenden MQTT-Verbindung lesen
                 $newStatus = $client->getDeviceStatus($deviceId);
                 if ($newStatus && !empty($newStatus)) {
