@@ -684,6 +684,38 @@ class SydpowerClient {
         return false;
     }
     
+    /**
+     * Wait for specific data fields to be present
+     */
+    public function waitForSpecificData($deviceId, $requiredFields, $timeout = 2.0) {
+        if (!$this->mqttConnected) {
+            return false;
+        }
+        
+        $start = microtime(true);
+        
+        // Poll waiting for required fields
+        while ((microtime(true) - $start) < $timeout) {
+            $this->mqttClient->loop(0.1);
+            
+            // Check if all required fields are present
+            if (isset($this->devices[$deviceId])) {
+                $hasAllFields = true;
+                foreach ($requiredFields as $field) {
+                    if (!isset($this->devices[$deviceId][$field])) {
+                        $hasAllFields = false;
+                        break;
+                    }
+                }
+                if ($hasAllFields) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
     public function disconnect() {
         if ($this->mqttClient && $this->mqttConnected) {
             $this->mqttClient->disconnect();
