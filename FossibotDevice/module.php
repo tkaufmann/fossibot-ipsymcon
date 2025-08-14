@@ -457,33 +457,12 @@ class FossibotDevice extends IPSModule
      */
     public function FBT_SetUSBOutput(bool $enabled, bool $statusUpdate = true)
     {
-        // Aktuelle Werte loggen
-        $soc = $this->GetValue('BatterySOC');
-        $dischargeLimit = $this->GetValue('DischargeLimit');
-        $this->LogMessage("USB-Schaltung: SOC=$soc%, DischargeLimit=$dischargeLimit%", KL_NOTIFY);
-        
-        // Prüfung: USB kann nicht eingeschaltet werden wenn SOC <= DischargeLimit
-        if ($enabled && $soc <= $dischargeLimit) {
-            $this->LogMessage("WARNUNG: USB kann nicht eingeschaltet werden - SOC ($soc%) ist <= DischargeLimit ($dischargeLimit%)", KL_WARNING);
-            $this->SetValue('ConnectionStatus', 'Fehler: Batteriestand zu niedrig');
-            return false;
-        }
-        
         $command = $enabled ? 'REGEnableUSBOutput' : 'REGDisableUSBOutput';
         $statusText = $enabled ? 'Schalte USB-Ausgang ein' : 'Schalte USB-Ausgang aus';
         
         $this->SetValue('ConnectionStatus', $statusText . '...');
-        $this->LogMessage("USB-Befehl: $command (enabled: " . ($enabled ? 'true' : 'false') . ')', KL_NOTIFY);
-        
-        $result = $this->SendDeviceCommand($command, null, $statusUpdate);
-        
-        if ($result) {
-            $this->LogMessage('USB-Befehl erfolgreich gesendet', KL_NOTIFY);
-        } else {
-            $this->LogMessage('USB-Befehl fehlgeschlagen', KL_ERROR);
-        }
-        
-        return $result;
+        $this->LogMessage("USB Output: " . ($enabled ? 'EIN' : 'AUS'), KL_NOTIFY);
+        return $this->SendDeviceCommand($command, null, $statusUpdate);
     }
 
     /**
