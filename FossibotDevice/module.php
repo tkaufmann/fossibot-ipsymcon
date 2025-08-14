@@ -331,7 +331,10 @@ class FossibotDevice extends IPSModule
         // Kein else-Zweig - wenn nicht vorhanden, alten Wert behalten!
         
         if (isset($status['maximumChargingCurrent'])) {
-            $this->SetValue('MaxChargingCurrent', intval($status['maximumChargingCurrent']));
+            if ($status['maximumChargingCurrent'] > 0) {
+                $this->SetValue('MaxChargingCurrent', intval($status['maximumChargingCurrent']));
+            }
+            // Wenn 0, dann NICHT aktualisieren (fehlerhafte Response von Output-Commands)
         }
         // WICHTIG: MaxChargingCurrent nicht löschen wenn nicht in Response
         // (passiert bei Output-Commands die keine Settings mitliefern)
