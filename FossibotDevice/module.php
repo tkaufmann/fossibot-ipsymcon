@@ -658,49 +658,47 @@ class FossibotDevice extends IPSModule
                 $success = false;
             }
             
-            // Konsolidiertes Event-driven Update für ALLE Commands
+            // Solides Event-driven Update für ALLE Commands
             if ($success && $autoRefresh) {
-                $this->LogMessage('SINGLE-CONNECTION: Fordere Status-Updates an...', KL_DEBUG);
+                $this->LogMessage('SINGLE-CONNECTION: Fordere Status-Update an...', KL_DEBUG);
                 
-                // Immer BEIDE Requests senden für vollständige Daten
-                $client->sendCommand($deviceId, 'REGRequestRealTimeData', null);
-                usleep(50000); // 50ms zwischen Requests
+                // REGRequestSettings liefert /client/04 Response mit ALLEM
                 $client->requestDeviceSettings($deviceId);
                 
-                // Definiere welche Felder wir mindestens brauchen
-                $requiredFields = ['soc', 'totalInput', 'totalOutput'];
+                // Warte auf Response mit allen Daten (client/04 hat Output-States + Settings)
+                $gotUpdate = $client->waitForDataUpdate($deviceId, 2.0);
                 
-                // Bei Output-Commands müssen Output-States da sein
-                if (strpos($command, 'Output') !== false) {
-                    $requiredFields[] = 'acOutput';
-                    $requiredFields[] = 'dcOutput';
-                    $requiredFields[] = 'usbOutput';
-                }
-                
-                // Bei Settings-Commands müssen Settings da sein
-                if ($this->isSettingsCommand($command)) {
-                    $requiredFields[] = 'maximumChargingCurrent';
-                }
-                
-                // Warte bis ALLE benötigten Felder da sind
-                $gotAllData = $client->waitForSpecificData($deviceId, $requiredFields, 2.0);
-                
-                if ($gotAllData) {
-                    // Jetzt haben wir garantiert alle Daten
+                if ($gotUpdate) {
+                    // Hole aktuelle Daten
                     $newStatus = $client->getDeviceStatus($deviceId);
-                    if ($newStatus && !empty($newStatus)) {
+                    
+                    // Prüfe ob die wichtigsten Felder da sind
+                    $hasBasics = isset($newStatus['soc']) && isset($newStatus['totalInput']);
+                    $hasOutputs = isset($newStatus['acOutput']) || isset($newStatus['dcOutput']) || isset($newStatus['usbOutput']);
+                    $hasSettings = isset($newStatus['maximumChargingCurrent']);
+                    
+                    if ($hasBasics) {
+                        // Update nur wenn wir mindestens Basis-Daten haben
                         $this->ProcessStatusData($newStatus);
                         $this->SetValue('LastUpdate', time());
-                        $this->LogMessage('✅ Vollständiges Update erhalten!', KL_NOTIFY);
+                        
+                        if ($hasOutputs && $hasSettings) {
+                            $this->LogMessage('✅ Vollständiges Update mit Output-States und Settings!', KL_NOTIFY);
+                        } else if ($hasOutputs) {
+                            $this->LogMessage('✅ Update mit Output-States erhalten', KL_DEBUG);
+                        } else if ($hasSettings) {
+                            $this->LogMessage('✅ Update mit Settings erhalten', KL_DEBUG);
+                        } else {
+                            $this->LogMessage('⚠️ Nur Basis-Update erhalten', KL_DEBUG);
+                        }
+                    } else {
+                        $this->LogMessage('⚠️ Keine verwertbaren Daten erhalten', KL_WARNING);
                     }
                 } else {
-                    $this->LogMessage('⚠️ Timeout - nicht alle Daten erhalten', KL_WARNING);
-                    // Trotzdem updaten was wir haben
-                    $newStatus = $client->getDeviceStatus($deviceId);
-                    if ($newStatus && !empty($newStatus)) {
-                        $this->ProcessStatusData($newStatus);
-                        $this->SetValue('LastUpdate', time());
-                    }
+                    $this->LogMessage('⚠️ Timeout - kein Update nach 2s', KL_WARNING);
+                    // Fallback: Volle Status-Abfrage
+                    usleep(500000); // 0.5s Pause
+                    $this->FBT_UpdateDeviceStatus();
                 }
             }
             
