@@ -606,8 +606,8 @@ class FossibotDevice extends IPSModule
             // Event-driven Update: Nach ALLEN erfolgreichen Befehlen Status aktualisieren  
             if ($success && $autoRefresh) {
                 // Kurz warten dass F2400 Änderung verarbeitet, dann Status neu laden
-                $this->LogMessage('FAST-UPDATE: Warte 0.5s, dann Status neu laden...', KL_DEBUG);
-                usleep(500000); // 0.5s Mikro-Delay für F2400 Processing
+                $this->LogMessage('FAST-UPDATE: Warte 0.3s, dann Status neu laden...', KL_DEBUG);
+                usleep(300000); // Reduziert von 0.5s auf 0.3s für bessere Performance
                 $this->FBT_UpdateDeviceStatus();
             }
             
@@ -632,11 +632,11 @@ class FossibotDevice extends IPSModule
             'REGUSBStandbyTime',
             'REGACStandbyTime',
             'REGDCStandbyTime'
-            // Output-Befehle sind KEINE Settings - sie brauchen kein Settings-Refresh!
         ];
         
         return in_array($command, $settingsCommands);
     }
+    
 
     /**
      * Erstellt Custom Profile für Eingang-Status
