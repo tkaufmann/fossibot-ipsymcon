@@ -658,46 +658,53 @@ class FossibotDevice extends IPSModule
                 $success = false;
             }
             
-            // Event-driven Settings-Update (viel schneller als vorher)
-            if ($success && $autoRefresh && $this->isSettingsCommand($command)) {
-                $this->LogMessage('FAST-SETTINGS: Warte auf Settings-Response...', KL_NOTIFY);
-                $client->sendCommand($deviceId, 'REGRequestSettings', null);
-                
-                // Warte spezifisch auf Settings statt generic Response
-                $gotSettings = $client->waitForSettingsResponse(1.5);
-                if ($gotSettings) {
-                    $this->LogMessage('✅ Settings-Response in < 1.5s erhalten!', KL_NOTIFY);
-                } else {
-                    $this->LogMessage('⏱️ Settings-Timeout nach 1.5s', KL_DEBUG);
-                }
-            }
-            
-            // Event-driven Update: Warte auf MQTT-Response in derselben Verbindung
+            // Konsolidiertes Event-driven Update für ALLE Commands
             if ($success && $autoRefresh) {
                 $this->LogMessage('SINGLE-CONNECTION: Warte auf Daten-Update...', KL_DEBUG);
                 
-                // Warte auf echte Datenänderung vom F2400 (max 2s)
-                $gotUpdate = $client->waitForDataUpdate($deviceId, 2.0);
+                // Warte kurz auf automatische Response vom F2400
+                $gotUpdate = $client->waitForDataUpdate($deviceId, 1.0);
                 
                 if ($gotUpdate) {
-                    // Status direkt aus der aktiven MQTT-Verbindung lesen
+                    // F2400 hat automatisch geantwortet - prüfe ob alles da ist
                     $newStatus = $client->getDeviceStatus($deviceId);
+                    
+                    // Prüfe ob wir alle nötigen Daten haben
+                    $hasOutputStates = isset($newStatus['acOutput']) || isset($newStatus['dcOutput']) || isset($newStatus['usbOutput']);
+                    $hasSettings = isset($newStatus['maximumChargingCurrent']) || isset($newStatus['acChargingUpperLimit']);
+                    
+                    // Falls Daten fehlen, explizit anfordern
+                    if (!$hasOutputStates && strpos($command, 'Output') !== false) {
+                        $this->LogMessage('Output-States fehlen, fordere an...', KL_DEBUG);
+                        $client->sendCommand($deviceId, 'REGRequestRealTimeData', null);
+                        $client->waitForDataUpdate($deviceId, 0.5);
+                        $newStatus = $client->getDeviceStatus($deviceId);
+                    }
+                    
+                    if (!$hasSettings && $this->isSettingsCommand($command)) {
+                        $this->LogMessage('Settings fehlen, fordere an...', KL_DEBUG);
+                        $client->requestDeviceSettings($deviceId);
+                        $client->waitForDataUpdate($deviceId, 0.5);
+                        $newStatus = $client->getDeviceStatus($deviceId);
+                    }
+                    
+                    // Update Frontend
                     if ($newStatus && !empty($newStatus)) {
                         $this->ProcessStatusData($newStatus);
                         $this->SetValue('LastUpdate', time());
-                        $this->LogMessage('⚡ Single-Connection Update in < 3s!', KL_NOTIFY);
+                        $this->LogMessage('⚡ Update in < 2s!', KL_NOTIFY);
                     }
                 } else {
-                    // Fallback: Explizit kompletten Status anfordern
-                    $this->LogMessage('Fordere explizit kompletten Status an...', KL_DEBUG);
+                    // Keine automatische Response - explizit ALLES anfordern
+                    $this->LogMessage('Keine Auto-Response, fordere alles an...', KL_DEBUG);
                     
-                    // BEIDE Requests senden für komplette Daten (Output-States + Settings)
+                    // Sende beide Requests für komplette Daten
                     $client->sendCommand($deviceId, 'REGRequestRealTimeData', null);
-                    usleep(100000); // 100ms zwischen Requests
+                    usleep(50000); // Nur 50ms Delay
                     $client->requestDeviceSettings($deviceId);
                     
-                    // Warte auf beide Updates (max 1.5s)
-                    if ($client->waitForDataUpdate($deviceId, 1.5)) {
+                    // Warte auf Responses
+                    if ($client->waitForDataUpdate($deviceId, 1.0)) {
                         $newStatus = $client->getDeviceStatus($deviceId);
                         if ($newStatus && !empty($newStatus)) {
                             $this->ProcessStatusData($newStatus);
