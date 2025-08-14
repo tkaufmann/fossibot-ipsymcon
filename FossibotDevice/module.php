@@ -349,11 +349,10 @@ class FossibotDevice extends IPSModule
         // Kein else-Zweig mehr - wenn nicht vorhanden, alten Wert behalten!
         
         if (isset($status['dischargeLowerLimit'])) {
-            if ($status['dischargeLowerLimit'] > 0) {
-                $dischargeLimit = round($status['dischargeLowerLimit'] / 10);
-                $this->SetValue('DischargeLimit', $dischargeLimit);
-            }
-            // Wenn 0, dann NICHT aktualisieren
+            // Entladelimit kann 0% sein! Immer aktualisieren wenn Wert vorhanden
+            $dischargeLimit = round($status['dischargeLowerLimit'] / 10);
+            $this->SetValue('DischargeLimit', $dischargeLimit);
+            $this->LogMessage("ENTLADELIMIT-UPDATE: Gerät meldet {$status['dischargeLowerLimit']} Promille = {$dischargeLimit}%", KL_DEBUG);
         }
         // Kein else-Zweig - wenn nicht vorhanden, alten Wert behalten!
         
@@ -560,9 +559,9 @@ class FossibotDevice extends IPSModule
         $result = $this->SendDeviceCommand('REGDischargeLowerLimit', $promille, false);
         
         if ($result) {
-            // Timer temporär auf 3s verkürzen für schnelles Update
-            $this->SetTimerInterval('UpdateTimer', 3000);
-            $this->LogMessage("Timer auf 3s gesetzt für Entladelimit-Update", KL_DEBUG);
+            // Timer temporär auf 5s verkürzen (Entladelimit braucht länger als andere Commands)
+            $this->SetTimerInterval('UpdateTimer', 5000);
+            $this->LogMessage("Timer auf 5s gesetzt für Entladelimit-Update", KL_DEBUG);
         }
         
         return $result;
