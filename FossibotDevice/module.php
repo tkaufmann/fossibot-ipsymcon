@@ -324,6 +324,8 @@ class FossibotDevice extends IPSModule
         if (isset($status['maximumChargingCurrent'])) {
             $this->SetValue('MaxChargingCurrent', intval($status['maximumChargingCurrent']));
         }
+        // WICHTIG: MaxChargingCurrent nicht löschen wenn nicht in Response
+        // (passiert bei Output-Commands die keine Settings mitliefern)
     }
 
     /**
@@ -351,6 +353,24 @@ class FossibotDevice extends IPSModule
         return $this->FBT_UpdateDeviceStatus();
     }
 
+    /**
+     * Cache löschen (z.B. wenn Discovery neue Geräte sucht)
+     */
+    public function FBT_ClearDeviceCache()
+    {
+        // Statische Variablen zurücksetzen
+        $clearCache = function() {
+            static $cachedDevices = null;
+            static $devicesCacheTime = 0;
+            $cachedDevices = null;
+            $devicesCacheTime = 0;
+        };
+        $clearCache();
+        
+        $this->LogMessage('DEVICE-CACHE: Cache gelöscht - nächster Befehl lädt Geräteliste neu', KL_NOTIFY);
+        return true;
+    }
+    
     /**
      * Geräteinformationen abrufen
      */
@@ -553,12 +573,63 @@ class FossibotDevice extends IPSModule
         try {
             require_once __DIR__ . '/../libs/SydpowerClient.php';
             
-            $client = new SydpowerClient($credentials['email'], $credentials['password']);
-            $client->authenticate();
+            // Connection-Pool: Nutze bestehende Verbindung wenn möglich
+            static $cachedClient = null;
+            static $cachedDevices = null;
+            static $devicesCacheTime = 0;
+            static $lastConnectionTime = 0;
+            static $connectionInUse = false;
+            $maxConnectionAge = 25; // Sekunden - kurz genug um aktiv zu bleiben
+            $maxDevicesCacheAge = 3600; // 1 Stunde - Devices ändern sich selten
             
-            // Geräteliste laden (wichtig für MQTT-Verbindung)
-            $devices = $client->getDevices();
-            $client->connectMqtt();
+            // Skip wenn Connection gerade benutzt wird (z.B. von Timer während Command läuft)
+            if ($connectionInUse) {
+                $this->LogMessage('SKIP: Connection wird gerade benutzt, überspringe Update', KL_DEBUG);
+                return false;
+            }
+            
+            $connectionInUse = true; // Lock für diese Operation
+            
+            $now = time();
+            $connectionAge = $now - $lastConnectionTime;
+            
+            // Verwende cached Client wenn Verbindung noch frisch
+            if ($cachedClient && $connectionAge < $maxConnectionAge) {
+                $client = $cachedClient;
+                $this->LogMessage("REUSE-CONNECTION: Verwende bestehende MQTT-Verbindung (${connectionAge}s alt)", KL_DEBUG);
+            } else {
+                // Neue Verbindung aufbauen
+                $this->LogMessage('NEW-CONNECTION: Baue neue MQTT-Verbindung auf...', KL_DEBUG);
+                
+                if ($cachedClient) {
+                    try {
+                        $cachedClient->disconnect();
+                    } catch (Exception $e) {
+                        // Ignore disconnect errors
+                    }
+                }
+                
+                $client = new SydpowerClient($credentials['email'], $credentials['password']);
+                $client->authenticate();
+                
+                // Device-Liste cachen mit Ablaufzeit
+                $devicesCacheAge = $now - $devicesCacheTime;
+                if (!$cachedDevices || $devicesCacheAge > $maxDevicesCacheAge) {
+                    $cachedDevices = $client->getDevices();
+                    $devicesCacheTime = $now;
+                    $this->LogMessage('DEVICE-CACHE: Geräteliste neu geladen (Cache war ' . 
+                                     ($cachedDevices ? "${devicesCacheAge}s alt" : 'leer') . ')', KL_DEBUG);
+                } else {
+                    // Verwende gecachte Devices (spart ~2s API-Call!)
+                    $client->setDevices($cachedDevices);
+                    $this->LogMessage("DEVICE-CACHE: Verwende gecachte Geräteliste (${devicesCacheAge}s alt)", KL_DEBUG);
+                }
+                
+                $client->connectMqtt();
+                
+                $cachedClient = $client;
+                $lastConnectionTime = $now;
+            }
             
             // Befehl senden (Settings-Request nur bei echten Settings-Befehlen)
             $this->LogMessage("Sende Befehl: $command mit Wert: " . json_encode($value), KL_DEBUG);
@@ -631,12 +702,15 @@ class FossibotDevice extends IPSModule
                 }
             }
             
-            $client->disconnect();
+            // NICHT disconnecten - Connection für nächsten Befehl behalten!
+            // $client->disconnect();  // REMOVED für Connection-Pool
             
+            $connectionInUse = false; // Lock freigeben
             return $success;
             
         } catch (Exception $e) {
             $this->LogMessage('Fehler beim Senden des Befehls: ' . $e->getMessage(), KL_ERROR);
+            $connectionInUse = false; // Lock auch bei Fehler freigeben
             return false;
         }
     }

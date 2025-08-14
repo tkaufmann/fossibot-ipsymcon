@@ -255,6 +255,10 @@ class SydpowerClient {
         return true;
     }
     
+    public function setDevices($devices) {
+        $this->devices = $devices;
+    }
+    
     public function getDevices() {
         return $this->apiCallWithRetry(function() {
             $devicesResponse = $this->apiRequest('devices', '{}', true);
