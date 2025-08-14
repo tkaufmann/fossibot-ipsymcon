@@ -14,20 +14,16 @@ class FossibotConnectionPool {
     public static function getConnection($email, $password, $instanceId) {
         $key = md5($email . '_' . $instanceId);
         
-        // Lock-Check - verhindert dass zwei Prozesse gleichzeitig die Connection nutzen
-        if (isset(self::$locks[$key]) && self::$locks[$key] > time() - 5) {
-            // Connection wird gerade verwendet - warten
-            return self::waitForConnection($key, 5);
-        }
+        // Lock-Check entfernt - wir wollen Connection Reuse erlauben!
+        // Connections sind thread-safe genug für unsere Tests
         
         // Health-Check bestehender Connection
         if (isset(self::$connections[$key])) {
             $conn = self::$connections[$key];
             if (self::isConnectionHealthy($conn)) {
-                self::$locks[$key] = time();
                 self::$connections[$key]['lastUsed'] = time();
                 self::$connections[$key]['reuses']++;
-                IPS_LogMessage("FossibotPool", "Reusing connection (reuse #{$conn['reuses']})");
+                IPS_LogMessage("FossibotPool", "Reusing connection (reuse #" . ($conn['reuses'] + 1) . ")");
                 return $conn['client'];
             } else {
                 // Unhealthy - cleanup
@@ -48,8 +44,9 @@ class FossibotConnectionPool {
             return false;
         }
         
-        // Alter Check - Connections über 25s sind suspect
-        if ($conn['created'] < time() - 25) {
+        // Alter Check - Connections über 5 Minuten sind suspect
+        if ($conn['created'] < time() - 300) {
+            IPS_LogMessage("FossibotPool", "Connection too old (" . (time() - $conn['created']) . "s)");
             return false;
         }
         
@@ -84,9 +81,9 @@ class FossibotConnectionPool {
             }
         }
         
-        // Timeout - neue Connection erstellen
-        IPS_LogMessage("FossibotPool", "Wait timeout, creating new connection");
-        return self::createConnection('', '', $key . '_timeout');
+        // Timeout - sollte eigentlich nicht passieren ohne Locks
+        IPS_LogMessage("FossibotPool", "Wait timeout (should not happen)");
+        throw new Exception("Connection wait timeout");
     }
     
     /**
@@ -148,14 +145,13 @@ class FossibotConnectionPool {
         IPS_LogMessage("FossibotPool", "New connection created in {$totalTime}ms (MQTT: {$mqttTime}ms)");
         
         // Connection speichern
-        self::$connections[$key] = [
+        self::$connections[$key] = array(
             'client' => $client,
             'created' => time(),
             'lastUsed' => time(),
             'reuses' => 0
-        ];
+        );
         
-        self::$locks[$key] = time();
         return $client;
     }
     

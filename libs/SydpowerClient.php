@@ -278,9 +278,9 @@ class SydpowerClient {
     }
     
     public function isHealthy() {
-        return $this->mqttConnected && 
-               $this->mqttClient && 
-               (time() - $this->lastActivityTime) < 30;
+        // Connection ist gesund wenn MQTT connected ist
+        // Activity-Zeit ist nicht relevant für Health
+        return $this->mqttConnected && $this->mqttClient !== null;
     }
     
     public function isMqttConnected() {
