@@ -310,17 +310,26 @@ class FossibotDevice extends IPSModule
         }
 
         // Ladelimits (Werte sind bereits in Promille, durch 10 teilen für Prozent)
-        if (isset($status['acChargingUpperLimit']) && $status['acChargingUpperLimit'] > 0) {
-            $chargingLimit = round($status['acChargingUpperLimit'] / 10);
-            $this->SetValue('ChargingLimit', $chargingLimit);
-            $this->LogMessage('LADELIMIT-RESPONSE: F2400 meldet acChargingUpperLimit=' . $status['acChargingUpperLimit'] . ' Promille = ' . $chargingLimit . '%', KL_NOTIFY);
-        } else {
-            $this->LogMessage('LADELIMIT-RESPONSE: acChargingUpperLimit NICHT in Status-Daten enthalten oder 0!', KL_WARNING);
+        // WICHTIG: Nur aktualisieren wenn Wert vorhanden, NIE löschen!
+        if (isset($status['acChargingUpperLimit'])) {
+            if ($status['acChargingUpperLimit'] > 0) {
+                $chargingLimit = round($status['acChargingUpperLimit'] / 10);
+                $this->SetValue('ChargingLimit', $chargingLimit);
+                $this->LogMessage('LADELIMIT-RESPONSE: F2400 meldet acChargingUpperLimit=' . $status['acChargingUpperLimit'] . ' Promille = ' . $chargingLimit . '%', KL_NOTIFY);
+            }
+            // Wenn 0, dann NICHT aktualisieren (könnte fehlende Daten bedeuten)
         }
-        if (isset($status['dischargeLowerLimit']) && $status['dischargeLowerLimit'] > 0) {
-            $dischargeLimit = round($status['dischargeLowerLimit'] / 10);
-            $this->SetValue('DischargeLimit', $dischargeLimit);
+        // Kein else-Zweig mehr - wenn nicht vorhanden, alten Wert behalten!
+        
+        if (isset($status['dischargeLowerLimit'])) {
+            if ($status['dischargeLowerLimit'] > 0) {
+                $dischargeLimit = round($status['dischargeLowerLimit'] / 10);
+                $this->SetValue('DischargeLimit', $dischargeLimit);
+            }
+            // Wenn 0, dann NICHT aktualisieren
         }
+        // Kein else-Zweig - wenn nicht vorhanden, alten Wert behalten!
+        
         if (isset($status['maximumChargingCurrent'])) {
             $this->SetValue('MaxChargingCurrent', intval($status['maximumChargingCurrent']));
         }
@@ -558,7 +567,7 @@ class FossibotDevice extends IPSModule
     }
 
     /**
-     * Befehl an das Gerät senden
+     * Befehl an das Gerät senden - REFACTORED mit neuen Pool/Validator/Semaphore Klassen
      */
     private function SendDeviceCommand(string $command, $value, bool $autoRefresh = true)
     {
@@ -570,147 +579,93 @@ class FossibotDevice extends IPSModule
             return false;
         }
 
+        // Load new helper classes
+        require_once __DIR__ . '/../libs/FossibotConnectionPool.php';
+        require_once __DIR__ . '/../libs/FossibotResponseValidator.php';
+        require_once __DIR__ . '/../libs/FossibotSemaphore.php';
+        
+        // Acquire semaphore to prevent collisions
+        if (!FossibotSemaphore::acquire('mqtt_command', 5000)) {
+            $this->LogMessage('Command blocked - another operation in progress', KL_WARNING);
+            return false;
+        }
+
         try {
-            require_once __DIR__ . '/../libs/SydpowerClient.php';
+            // Get connection from pool (handles caching automatically)
+            $client = FossibotConnectionPool::getConnection(
+                $credentials['email'],
+                $credentials['password'],
+                $this->InstanceID
+            );
             
-            // Connection-Pool: Nutze bestehende Verbindung wenn möglich
-            static $cachedClient = null;
-            static $cachedDevices = null;
-            static $devicesCacheTime = 0;
-            static $lastConnectionTime = 0;
-            static $connectionInUse = false;
-            $maxConnectionAge = 25; // Sekunden - kurz genug um aktiv zu bleiben
-            $maxDevicesCacheAge = 3600; // 1 Stunde - Devices ändern sich selten
-            
-            // Skip wenn Connection gerade benutzt wird (z.B. von Timer während Command läuft)
-            if ($connectionInUse) {
-                $this->LogMessage('SKIP: Connection wird gerade benutzt, überspringe Update', KL_DEBUG);
-                return false;
+            if (!$client) {
+                throw new Exception("Failed to get connection from pool");
             }
             
-            $connectionInUse = true; // Lock für diese Operation
-            
-            $now = time();
-            $connectionAge = $now - $lastConnectionTime;
-            
-            // Verwende cached Client wenn Verbindung noch frisch
-            if ($cachedClient && $connectionAge < $maxConnectionAge) {
-                $client = $cachedClient;
-                $this->LogMessage("REUSE-CONNECTION: Verwende bestehende MQTT-Verbindung (${connectionAge}s alt)", KL_DEBUG);
-            } else {
-                // Neue Verbindung aufbauen
-                $this->LogMessage('NEW-CONNECTION: Baue neue MQTT-Verbindung auf...', KL_DEBUG);
-                
-                if ($cachedClient) {
-                    try {
-                        $cachedClient->disconnect();
-                    } catch (Exception $e) {
-                        // Ignore disconnect errors
-                    }
-                }
-                
-                $client = new SydpowerClient($credentials['email'], $credentials['password']);
-                $client->authenticate();
-                
-                // Device-Liste cachen mit Ablaufzeit
-                $devicesCacheAge = $now - $devicesCacheTime;
-                if (!$cachedDevices || $devicesCacheAge > $maxDevicesCacheAge) {
-                    $cachedDevices = $client->getDevices();
-                    $devicesCacheTime = $now;
-                    $this->LogMessage('DEVICE-CACHE: Geräteliste neu geladen (Cache war ' . 
-                                     ($cachedDevices ? "${devicesCacheAge}s alt" : 'leer') . ')', KL_DEBUG);
-                } else {
-                    // Verwende gecachte Devices (spart ~2s API-Call!)
-                    $client->setDevices($cachedDevices);
-                    $this->LogMessage("DEVICE-CACHE: Verwende gecachte Geräteliste (${devicesCacheAge}s alt)", KL_DEBUG);
-                }
-                
-                $client->connectMqtt();
-                
-                $cachedClient = $client;
-                $lastConnectionTime = $now;
-            }
-            
-            // Befehl senden (Settings-Request nur bei echten Settings-Befehlen)
-            $this->LogMessage("Sende Befehl: $command mit Wert: " . json_encode($value), KL_DEBUG);
+            // Send command
+            $this->LogMessage("Sending command: $command with value: " . json_encode($value), KL_DEBUG);
             $result = $client->sendCommand($deviceId, $command, $value);
             
-            // Nur bei Settings-Befehlen parallel Status anfordern
-            if ($this->isSettingsCommand($command)) {
-                $client->requestDeviceSettings($deviceId);
+            if (!$result) {
+                throw new Exception("Failed to send command");
             }
             
-            // Smart waiting für Response (optimiert auf 1s für Schaltbefehle)
-            $timeout = $this->isSettingsCommand($command) ? 1.5 : 1.0; // Schaltbefehle sind schneller
-            $gotResponse = $client->waitForResponse($timeout);
-            $this->LogMessage("Response erhalten: " . ($gotResponse ? 'JA' : 'NEIN') . " (${timeout}s)", KL_DEBUG);
+            $this->SetValue('ConnectionStatus', 'Command sent');
             
-            if ($gotResponse) {
-                $this->SetValue('ConnectionStatus', 'Online');
-                $success = true;
-            } else {
-                // Keine Response - Quick Ping um zu prüfen ob Gerät erreichbar
-                if ($client->quickPing($deviceId)) {
-                    $this->SetValue('ConnectionStatus', 'Online - Befehl Timeout');
+            // Auto-refresh handling with intelligent response validation
+            if ($autoRefresh) {
+                $this->LogMessage('Waiting for validated response...', KL_DEBUG);
+                
+                // Use ResponseValidator for intelligent waiting
+                $response = FossibotResponseValidator::waitForValidResponse(
+                    $client,
+                    $deviceId,
+                    $command,
+                    $value
+                );
+                
+                if ($response['success']) {
+                    // Update frontend with validated data
+                    $this->ProcessStatusData($response['data']);
+                    $this->SetValue('LastUpdate', time());
+                    $this->SetValue('ConnectionStatus', 'Online');
+                    
+                    $this->LogMessage("✅ Command successful in {$response['time']}ms", KL_NOTIFY);
+                    
+                    // Release connection back to pool
+                    FossibotConnectionPool::releaseConnection($this->InstanceID);
+                    FossibotSemaphore::release('mqtt_command');
+                    
+                    return true;
+                    
                 } else {
-                    $this->SetValue('ConnectionStatus', 'Gerät nicht erreichbar');
-                }
-                $success = false;
-            }
-            
-            // Solides Event-driven Update für ALLE Commands
-            if ($success && $autoRefresh) {
-                $this->LogMessage('SINGLE-CONNECTION: Fordere Status-Update an...', KL_DEBUG);
-                
-                // REGRequestSettings liefert /client/04 Response mit ALLEM
-                $client->requestDeviceSettings($deviceId);
-                
-                // Warte auf Response mit allen Daten (client/04 hat Output-States + Settings)
-                $gotUpdate = $client->waitForDataUpdate($deviceId, 2.0);
-                
-                if ($gotUpdate) {
-                    // Hole aktuelle Daten
-                    $newStatus = $client->getDeviceStatus($deviceId);
-                    
-                    // Prüfe ob die wichtigsten Felder da sind
-                    $hasBasics = isset($newStatus['soc']) && isset($newStatus['totalInput']);
-                    $hasOutputs = isset($newStatus['acOutput']) || isset($newStatus['dcOutput']) || isset($newStatus['usbOutput']);
-                    $hasSettings = isset($newStatus['maximumChargingCurrent']);
-                    
-                    if ($hasBasics) {
-                        // Update nur wenn wir mindestens Basis-Daten haben
-                        $this->ProcessStatusData($newStatus);
+                    // Timeout or partial response
+                    if (isset($response['partial']) && !empty($response['partial'])) {
+                        $this->LogMessage('⚠️ Partial response received, updating what we have', KL_WARNING);
+                        $this->ProcessStatusData($response['partial']);
                         $this->SetValue('LastUpdate', time());
-                        
-                        if ($hasOutputs && $hasSettings) {
-                            $this->LogMessage('✅ Vollständiges Update mit Output-States und Settings!', KL_NOTIFY);
-                        } else if ($hasOutputs) {
-                            $this->LogMessage('✅ Update mit Output-States erhalten', KL_DEBUG);
-                        } else if ($hasSettings) {
-                            $this->LogMessage('✅ Update mit Settings erhalten', KL_DEBUG);
-                        } else {
-                            $this->LogMessage('⚠️ Nur Basis-Update erhalten', KL_DEBUG);
-                        }
-                    } else {
-                        $this->LogMessage('⚠️ Keine verwertbaren Daten erhalten', KL_WARNING);
                     }
-                } else {
-                    $this->LogMessage('⚠️ Timeout - kein Update nach 2s', KL_WARNING);
-                    // Fallback: Volle Status-Abfrage
-                    usleep(500000); // 0.5s Pause
-                    $this->FBT_UpdateDeviceStatus();
+                    
+                    $missing = isset($response['missing']) ? implode(', ', $response['missing']) : 'unknown';
+                    $this->LogMessage("⚠️ Response validation failed. Missing: {$missing}", KL_WARNING);
+                    $this->SetValue('ConnectionStatus', 'Partial response');
                 }
             }
             
-            // NICHT disconnecten - Connection für nächsten Befehl behalten!
-            // $client->disconnect();  // REMOVED für Connection-Pool
+            // Release resources
+            FossibotConnectionPool::releaseConnection($this->InstanceID);
+            FossibotSemaphore::release('mqtt_command');
             
-            $connectionInUse = false; // Lock freigeben
-            return $success;
+            return $result;
             
         } catch (Exception $e) {
-            $this->LogMessage('Fehler beim Senden des Befehls: ' . $e->getMessage(), KL_ERROR);
-            $connectionInUse = false; // Lock auch bei Fehler freigeben
+            $this->LogMessage('Error sending command: ' . $e->getMessage(), KL_ERROR);
+            $this->SetValue('ConnectionStatus', 'Error');
+            
+            // Always release resources
+            FossibotConnectionPool::releaseConnection($this->InstanceID);
+            FossibotSemaphore::release('mqtt_command');
+            
             return false;
         }
     }

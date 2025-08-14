@@ -21,6 +21,8 @@ class SydpowerClient {
     private $tokenCache;
     private $lastMqttResponse = null;
     private $responseReceived = false;
+    private $lastPingTime = 0;
+    private $lastActivityTime = 0;
     
     public function __construct($username = null, $password = null) {
         // Try to load from config if no credentials provided
@@ -259,6 +261,32 @@ class SydpowerClient {
         $this->devices = $devices;
     }
     
+    public function setAccessToken($token) {
+        $this->accessToken = $token;
+    }
+    
+    public function setMqttToken($token) {
+        $this->mqttAccessToken = $token;
+    }
+    
+    public function getAccessToken() {
+        return $this->accessToken;
+    }
+    
+    public function getMqttToken() {
+        return $this->mqttAccessToken;
+    }
+    
+    public function isHealthy() {
+        return $this->mqttConnected && 
+               $this->mqttClient && 
+               (time() - $this->lastActivityTime) < 30;
+    }
+    
+    public function isMqttConnected() {
+        return $this->mqttConnected;
+    }
+    
     public function getDevices() {
         return $this->apiCallWithRetry(function() {
             $devicesResponse = $this->apiRequest('devices', '{}', true);
@@ -322,6 +350,9 @@ class SydpowerClient {
     }
     
     private function handleMqttMessage($topic, $payload) {
+        // Update activity time
+        $this->lastActivityTime = time();
+        
         // Mark that we received a response
         $this->responseReceived = true;
         $this->lastMqttResponse = ['topic' => $topic, 'payload' => $payload, 'time' => microtime(true)];
