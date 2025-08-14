@@ -603,20 +603,12 @@ class FossibotDevice extends IPSModule
             
             $client->disconnect();
             
-            // Event-driven Update: Nach ALLEN erfolgreichen Befehlen Status aktualisieren
+            // Event-driven Update: Nach ALLEN erfolgreichen Befehlen Status aktualisieren  
             if ($success && $autoRefresh) {
-                // Aktuellen Status aus der bestehenden MQTT-Verbindung lesen
-                $newStatus = $client->getDeviceStatus($deviceId);
-                if ($newStatus && !empty($newStatus)) {
-                    $this->ProcessStatusData($newStatus);
-                    $this->SetValue('LastUpdate', time());
-                    $this->LogMessage('FAST-UPDATE: Status direkt aus MQTT-Response aktualisiert', KL_DEBUG);
-                } else {
-                    // Fallback nur wenn keine Response
-                    $this->LogMessage('FALLBACK: Keine direkte Response, warte kurz...', KL_DEBUG);
-                    sleep(1); // Nur 1s statt 2s
-                    $this->FBT_UpdateDeviceStatus();
-                }
+                // Kurz warten dass F2400 Änderung verarbeitet, dann Status neu laden
+                $this->LogMessage('FAST-UPDATE: Warte 0.5s, dann Status neu laden...', KL_DEBUG);
+                usleep(500000); // 0.5s Mikro-Delay für F2400 Processing
+                $this->FBT_UpdateDeviceStatus();
             }
             
             return $success;
