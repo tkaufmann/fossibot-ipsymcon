@@ -602,6 +602,32 @@ class FossibotDevice extends IPSModule
                 throw new Exception("Failed to get connection from pool");
             }
             
+            // Special handling for AC Output when charging current is 0
+            if ($command === 'REGEnableACOutput') {
+                // Check current charging current
+                $status = $client->getDeviceStatus($deviceId);
+                $currentChargingCurrent = isset($status['maximumChargingCurrent']) ? $status['maximumChargingCurrent'] : 0;
+                
+                if ($currentChargingCurrent == 0) {
+                    $this->LogMessage('AC Output benötigt Ladestrom > 0, setze auf 5A', KL_NOTIFY);
+                    
+                    // Set charging current to 5A first
+                    $client->sendCommand($deviceId, 'REGMaxChargeCurrent', 5);
+                    
+                    // Wait for it to apply
+                    $chargeResponse = FossibotResponseValidator::waitForValidResponse(
+                        $client,
+                        $deviceId,
+                        'REGMaxChargeCurrent',
+                        5
+                    );
+                    
+                    if (!$chargeResponse['success']) {
+                        $this->LogMessage('Warnung: Ladestrom konnte nicht gesetzt werden', KL_WARNING);
+                    }
+                }
+            }
+            
             // Send command
             $this->LogMessage("Sending command: $command with value: " . json_encode($value), KL_DEBUG);
             $result = $client->sendCommand($deviceId, $command, $value);
