@@ -54,7 +54,7 @@ class FossibotResponseValidator {
             'REGMaxChargeCurrent' => array(
                 'fields' => array('maximumChargingCurrent'),
                 'validateType' => 'maxCurrent',
-                'timeout' => 2000
+                'timeout' => 2000  // Reduziert auf 2s, da Timer das Update übernimmt
             ),
             'REGRequestSettings' => array(
                 'fields' => array('soc', 'totalInput', 'totalOutput'),
@@ -170,6 +170,11 @@ class FossibotResponseValidator {
                         );
                     } else {
                         IPS_LogMessage("ResponseValidator", "Fields present but validation failed");
+                        // Validation failed - für Commands außer Settings ist das ein finaler Fehler
+                        if ($expectation['validateType'] !== 'settings') {
+                            // Bei Output-Commands ist ein falscher Wert ein Problem
+                            // Wir warten aber trotzdem weiter, falls noch Updates kommen
+                        }
                     }
                 }
             }
