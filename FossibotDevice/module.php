@@ -760,11 +760,35 @@ class FossibotDevice extends IPSModule
                         $this->LogMessage('⚠️ Partial response received, updating what we have', KL_WARNING);
                         $this->ProcessStatusData($response['partial']);
                         $this->SetValue('LastUpdate', time());
+                        
+                        // Bei Output-Commands: Wenn das Hauptfeld korrekt ist, ist es OK
+                        $isOutputCommand = strpos($command, 'Output') !== false;
+                        if ($isOutputCommand) {
+                            // Prüfe ob der gewünschte Output-Status erreicht wurde
+                            $outputOk = false;
+                            if (strpos($command, 'ACOutput') !== false && isset($response['partial']['acOutput'])) {
+                                $outputOk = true;
+                            } elseif (strpos($command, 'DCOutput') !== false && isset($response['partial']['dcOutput'])) {
+                                $outputOk = true;
+                            } elseif (strpos($command, 'USBOutput') !== false && isset($response['partial']['usbOutput'])) {
+                                $outputOk = true;
+                            }
+                            
+                            if ($outputOk) {
+                                $this->SetValue('ConnectionStatus', 'Online');
+                                $this->LogMessage('Output-Command erfolgreich (trotz partial response)', KL_DEBUG);
+                                return true;
+                            }
+                        }
+                        
+                        // Sonst als Warnung markieren
+                        $this->SetValue('ConnectionStatus', 'Online (teilweise Daten)');
+                    } else {
+                        // Gar keine Daten erhalten
+                        $missing = isset($response['missing']) ? implode(', ', $response['missing']) : 'unknown';
+                        $this->LogMessage("⚠️ Response validation failed. Missing: {$missing}", KL_WARNING);
+                        $this->SetValue('ConnectionStatus', 'Warnung: Keine Antwort');
                     }
-                    
-                    $missing = isset($response['missing']) ? implode(', ', $response['missing']) : 'unknown';
-                    $this->LogMessage("⚠️ Response validation failed. Missing: {$missing}", KL_WARNING);
-                    $this->SetValue('ConnectionStatus', 'Warnung: Unvollständige Antwort');
                 }
             } else {
                 // Ohne autoRefresh setzen wir Status auf "Warte auf Update..."
