@@ -688,17 +688,16 @@ class FossibotDevice extends IPSModule
                         $this->LogMessage('⚡ Single-Connection Update in < 3s!', KL_NOTIFY);
                     }
                 } else {
-                    // Fallback: Explizit kompletten Status anfordern (nicht nur Settings!)
+                    // Fallback: Explizit kompletten Status anfordern
                     $this->LogMessage('Fordere explizit kompletten Status an...', KL_DEBUG);
                     
-                    // Bei Output-Commands brauchen wir REGRequestRealTimeData für Output-States
-                    if (strpos($command, 'Output') !== false) {
-                        $client->sendCommand($deviceId, 'REGRequestRealTimeData', null);
-                    } else {
-                        $client->requestDeviceSettings($deviceId);
-                    }
+                    // BEIDE Requests senden für komplette Daten (Output-States + Settings)
+                    $client->sendCommand($deviceId, 'REGRequestRealTimeData', null);
+                    usleep(100000); // 100ms zwischen Requests
+                    $client->requestDeviceSettings($deviceId);
                     
-                    if ($client->waitForDataUpdate($deviceId, 1.0)) {
+                    // Warte auf beide Updates (max 1.5s)
+                    if ($client->waitForDataUpdate($deviceId, 1.5)) {
                         $newStatus = $client->getDeviceStatus($deviceId);
                         if ($newStatus && !empty($newStatus)) {
                             $this->ProcessStatusData($newStatus);
