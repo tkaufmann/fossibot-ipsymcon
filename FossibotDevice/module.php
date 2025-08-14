@@ -188,22 +188,33 @@ class FossibotDevice extends IPSModule
         $this->SetValue('ConnectionStatus', 'Aktualisiere Status...');
 
         try {
-            // Fossibot Client laden
-            require_once __DIR__ . '/../libs/SydpowerClient.php';
+            // Load helper classes
+            require_once __DIR__ . '/../libs/FossibotConnectionPool.php';
+            require_once __DIR__ . '/../libs/FossibotSemaphore.php';
             
-            $client = new SydpowerClient($credentials['email'], $credentials['password']);
-            $client->authenticate();
+            // Acquire semaphore to prevent collisions
+            if (!FossibotSemaphore::acquire('status_update', 5000)) {
+                $this->LogMessage('Status-Update blockiert - andere Operation läuft', KL_WARNING);
+                $this->SetValue('ConnectionStatus', 'Warte auf andere Operation...');
+                return false;
+            }
             
-            // Gerätedaten abrufen
-            $this->SetValue('ConnectionStatus', 'Lade Geräteliste...');
-            
-            // Zuerst Geräteliste laden (wichtig!)
-            $devices = $client->getDevices();
-            $this->LogMessage('Debug: Geräteliste geladen, Anzahl: ' . count($devices), KL_DEBUG);
-            
-            // MQTT verbinden
-            $this->SetValue('ConnectionStatus', 'Verbinde MQTT...');
-            $client->connectMqtt();
+            try {
+                // Get connection from pool (nutzt Cache!)
+                // WICHTIG: Gleicher Key wie SendDeviceCommand damit gleiche Connection!
+                $client = FossibotConnectionPool::getConnection(
+                    $credentials['email'],
+                    $credentials['password'],
+                    $this->InstanceID
+                );
+                
+                if (!$client) {
+                    throw new Exception("Verbindung fehlgeschlagen");
+                }
+                
+                // Devices sind bereits im Pool gecached
+                $devices = $client->getDevices();
+                $this->LogMessage('Debug: Geräte aus Pool, Anzahl: ' . count($devices), KL_DEBUG);
             
             // Geräteeinstellungen anfordern
             $this->SetValue('ConnectionStatus', 'Lade Gerätedaten...');
@@ -246,8 +257,10 @@ class FossibotDevice extends IPSModule
                 // Status-Update erfolgreich
                 $this->LogMessage('Status aktualisiert', KL_DEBUG);
                 
-                // MQTT-Verbindung sauber schließen
-                $client->disconnect();
+                // Release connection back to pool (NICHT disconnect!)
+                FossibotConnectionPool::releaseConnection($this->InstanceID);
+                FossibotSemaphore::release('status_update');
+                
                 return true;
             } else {
                 $this->SetValue('ConnectionStatus', 'Fehler: Keine Daten empfangen');
@@ -257,18 +270,22 @@ class FossibotDevice extends IPSModule
                 $allData = $client->getAllDeviceData();
                 $this->LogMessage('Debug: Komplettes devices Array: ' . json_encode($allData), KL_DEBUG);
                 
-                // MQTT-Verbindung sauber schließen
-                $client->disconnect();
+                // Release connection back to pool
+                FossibotConnectionPool::releaseConnection($this->InstanceID);
+                FossibotSemaphore::release('status_update');
+                
                 return false;
+            }
+            
+            } finally {
+                // Always release resources
+                FossibotConnectionPool::releaseConnection($this->InstanceID);
+                FossibotSemaphore::release('status_update');
             }
             
         } catch (Exception $e) {
             $this->SetValue('ConnectionStatus', 'Fehler: ' . $e->getMessage());
             $this->LogMessage('Update-Fehler: ' . $e->getMessage(), KL_ERROR);
-            // MQTT-Verbindung sauber schließen auch bei Fehlern
-            if (isset($client)) {
-                $client->disconnect();
-            }
             return false;
         }
     }
@@ -560,29 +577,9 @@ class FossibotDevice extends IPSModule
      */
     public function FBT_RequestSettings()
     {
-        $deviceId = $this->ReadPropertyString('DeviceID');
-        $credentials = $this->GetDiscoveryCredentials();
-
-        if (empty($deviceId) || !$credentials) {
-            $this->LogMessage('Gerät nicht konfiguriert', KL_ERROR);
-            return false;
-        }
-
-        try {
-            require_once __DIR__ . '/../libs/SydpowerClient.php';
-            
-            $client = new SydpowerClient($credentials['email'], $credentials['password']);
-            $client->authenticate();
-            
-            $devices = $client->getDevices();
-            $client->connectMqtt();
-            
-            return $this->SendDeviceCommand('REGRequestSettings', null);
-            
-        } catch (Exception $e) {
-            $this->LogMessage('Fehler beim Anfordern der Einstellungen: ' . $e->getMessage(), KL_ERROR);
-            return false;
-        }
+        // Einfach den Command senden - SendDeviceCommand kümmert sich um alles
+        $this->SetValue('ConnectionStatus', 'Fordere Einstellungen an...');
+        return $this->SendDeviceCommand('REGRequestSettings', null, true);
     }
 
     /**
@@ -598,18 +595,23 @@ class FossibotDevice extends IPSModule
         }
         
         try {
+            require_once __DIR__ . '/../libs/FossibotConnectionPool.php';
             require_once __DIR__ . '/../libs/SydpowerClient.php';
             
+            // Pool zurücksetzen, um alle Connections zu schließen
+            FossibotConnectionPool::reset();
+            
+            // Token-Cache direkt leeren
             $client = new SydpowerClient($credentials['email'], $credentials['password']);
             $client->clearTokenCache();
             
-            $this->LogMessage('Token-Cache geleert - nächste Authentifizierung erfolgt neu', KL_NOTIFY);
-            $this->SetValue('ConnectionStatus', 'Token-Cache geleert');
+            $this->LogMessage('Token-Cache und Connection-Pool geleert', KL_NOTIFY);
+            $this->SetValue('ConnectionStatus', 'Cache geleert');
             
             return true;
             
         } catch (Exception $e) {
-            $this->LogMessage('Fehler beim Leeren des Token-Cache: ' . $e->getMessage(), KL_ERROR);
+            $this->LogMessage('Fehler beim Leeren des Cache: ' . $e->getMessage(), KL_ERROR);
             return false;
         }
     }
