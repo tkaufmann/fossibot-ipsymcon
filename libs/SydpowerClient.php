@@ -370,6 +370,9 @@ class SydpowerClient {
             $this->devices[$deviceMac] = [];
         }
         
+        // Track update timestamp for change detection
+        $this->devices[$deviceMac]['_lastUpdate'] = microtime(true);
+        
         $activeOutputs = str_pad(decbin($registers[41]), 16, '0', STR_PAD_LEFT);
         $activeOutputs = str_split(strrev($activeOutputs)); // Reverse for correct bit order
         
@@ -649,6 +652,32 @@ class SydpowerClient {
         
         // Listening for MQTT messages
         $this->mqttClient->loop($timeout);
+        return true; // Return true to indicate we listened
+    }
+    
+    /**
+     * Wait for any data update after command (universal for all command types)
+     */
+    public function waitForDataUpdate($deviceId, $timeout = 2.0) {
+        if (!$this->mqttConnected) {
+            return false;
+        }
+        
+        $start = microtime(true);
+        $initialTimestamp = isset($this->devices[$deviceId]['_lastUpdate']) ? $this->devices[$deviceId]['_lastUpdate'] : 0;
+        
+        // Poll in 100ms chunks waiting for any data update
+        while ((microtime(true) - $start) < $timeout) {
+            $this->mqttClient->loop(0.1);
+            
+            // Check if we got a new update (timestamp changed)
+            if (isset($this->devices[$deviceId]['_lastUpdate']) && 
+                $this->devices[$deviceId]['_lastUpdate'] > $initialTimestamp) {
+                return true; // Got fresh data
+            }
+        }
+        
+        return false;
     }
     
     public function disconnect() {

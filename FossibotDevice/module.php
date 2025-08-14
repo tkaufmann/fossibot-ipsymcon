@@ -601,15 +601,37 @@ class FossibotDevice extends IPSModule
                 }
             }
             
-            $client->disconnect();
-            
-            // Event-driven Update: Nach ALLEN erfolgreichen Befehlen Status aktualisieren  
+            // Event-driven Update: Warte auf MQTT-Response in derselben Verbindung
             if ($success && $autoRefresh) {
-                // Kurz warten dass F2400 Änderung verarbeitet, dann Status neu laden
-                $this->LogMessage('FAST-UPDATE: Warte 0.3s, dann Status neu laden...', KL_DEBUG);
-                usleep(300000); // Reduziert von 0.5s auf 0.3s für bessere Performance
-                $this->FBT_UpdateDeviceStatus();
+                $this->LogMessage('SINGLE-CONNECTION: Warte auf Daten-Update...', KL_DEBUG);
+                
+                // Warte auf echte Datenänderung vom F2400 (max 2s)
+                $gotUpdate = $client->waitForDataUpdate($deviceId, 2.0);
+                
+                if ($gotUpdate) {
+                    // Status direkt aus der aktiven MQTT-Verbindung lesen
+                    $newStatus = $client->getDeviceStatus($deviceId);
+                    if ($newStatus && !empty($newStatus)) {
+                        $this->ProcessStatusData($newStatus);
+                        $this->SetValue('LastUpdate', time());
+                        $this->LogMessage('⚡ Single-Connection Update in < 3s!', KL_NOTIFY);
+                    }
+                } else {
+                    // Fallback: Explizit Status anfordern wenn keine automatische Response
+                    $this->LogMessage('Fordere explizit Status an...', KL_DEBUG);
+                    $client->requestDeviceSettings($deviceId);
+                    
+                    if ($client->waitForDataUpdate($deviceId, 1.0)) {
+                        $newStatus = $client->getDeviceStatus($deviceId);
+                        if ($newStatus && !empty($newStatus)) {
+                            $this->ProcessStatusData($newStatus);
+                            $this->SetValue('LastUpdate', time());
+                        }
+                    }
+                }
             }
+            
+            $client->disconnect();
             
             return $success;
             
