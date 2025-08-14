@@ -9,90 +9,102 @@ class FossibotResponseValidator {
     /**
      * Command-Erwartungen definieren was jeder Command als Response braucht
      */
-    private static $commandExpectations = [
-        'REGEnableACOutput' => [
-            'fields' => ['acOutput', 'maximumChargingCurrent', 'totalOutput'],
-            'validate' => function($response) {
+    private static function getCommandExpectations() {
+        return array(
+            'REGEnableACOutput' => array(
+                'fields' => array('acOutput', 'maximumChargingCurrent', 'totalOutput'),
+                'validateType' => 'acOn',
+                'timeout' => 2000
+            ),
+            'REGDisableACOutput' => array(
+                'fields' => array('acOutput', 'maximumChargingCurrent', 'totalOutput'),
+                'validateType' => 'acOff',
+                'timeout' => 2000
+            ),
+            'REGEnableDCOutput' => array(
+                'fields' => array('dcOutput', 'maximumChargingCurrent'),
+                'validateType' => 'dcOn',
+                'timeout' => 2000
+            ),
+            'REGDisableDCOutput' => array(
+                'fields' => array('dcOutput', 'maximumChargingCurrent'),
+                'validateType' => 'dcOff',
+                'timeout' => 2000
+            ),
+            'REGEnableUSBOutput' => array(
+                'fields' => array('usbOutput', 'maximumChargingCurrent'),
+                'validateType' => 'usbOn',
+                'timeout' => 2000
+            ),
+            'REGDisableUSBOutput' => array(
+                'fields' => array('usbOutput', 'maximumChargingCurrent'),
+                'validateType' => 'usbOff',
+                'timeout' => 2000
+            ),
+            'REGChargeUpperLimit' => array(
+                'fields' => array('acChargingUpperLimit', 'maximumChargingCurrent'),
+                'validateType' => 'chargeLimit',
+                'timeout' => 2500
+            ),
+            'REGDischargeLowerLimit' => array(
+                'fields' => array('dischargeLowerLimit', 'maximumChargingCurrent'),
+                'validateType' => 'dischargeLimit',
+                'timeout' => 2500
+            ),
+            'REGMaxChargeCurrent' => array(
+                'fields' => array('maximumChargingCurrent'),
+                'validateType' => 'maxCurrent',
+                'timeout' => 2000
+            ),
+            'REGRequestSettings' => array(
+                'fields' => array('soc', 'totalInput', 'totalOutput'),
+                'validateType' => 'settings',
+                'timeout' => 3000
+            )
+        );
+    }
+    
+    /**
+     * Validiert eine Response basierend auf dem Typ
+     */
+    private static function validateResponse($type, $response, $expectedValue = null) {
+        switch ($type) {
+            case 'acOn':
                 return isset($response['acOutput']) && $response['acOutput'] === true;
-            },
-            'timeout' => 2000
-        ],
-        'REGDisableACOutput' => [
-            'fields' => ['acOutput', 'maximumChargingCurrent', 'totalOutput'],
-            'validate' => function($response) {
+            case 'acOff':
                 return isset($response['acOutput']) && $response['acOutput'] === false;
-            },
-            'timeout' => 2000
-        ],
-        'REGEnableDCOutput' => [
-            'fields' => ['dcOutput', 'maximumChargingCurrent'],
-            'validate' => function($response) {
+            case 'dcOn':
                 return isset($response['dcOutput']) && $response['dcOutput'] === true;
-            },
-            'timeout' => 2000
-        ],
-        'REGDisableDCOutput' => [
-            'fields' => ['dcOutput', 'maximumChargingCurrent'],
-            'validate' => function($response) {
+            case 'dcOff':
                 return isset($response['dcOutput']) && $response['dcOutput'] === false;
-            },
-            'timeout' => 2000
-        ],
-        'REGEnableUSBOutput' => [
-            'fields' => ['usbOutput', 'maximumChargingCurrent'],
-            'validate' => function($response) {
+            case 'usbOn':
                 return isset($response['usbOutput']) && $response['usbOutput'] === true;
-            },
-            'timeout' => 2000
-        ],
-        'REGDisableUSBOutput' => [
-            'fields' => ['usbOutput', 'maximumChargingCurrent'],
-            'validate' => function($response) {
+            case 'usbOff':
                 return isset($response['usbOutput']) && $response['usbOutput'] === false;
-            },
-            'timeout' => 2000
-        ],
-        'REGChargeUpperLimit' => [
-            'fields' => ['acChargingUpperLimit', 'maximumChargingCurrent'],
-            'validate' => function($response, $expectedValue) {
+            case 'chargeLimit':
                 if (!isset($response['acChargingUpperLimit'])) return false;
                 $expectedPromille = $expectedValue * 10;
                 return abs($response['acChargingUpperLimit'] - $expectedPromille) < 5;
-            },
-            'timeout' => 2500
-        ],
-        'REGDischargeLowerLimit' => [
-            'fields' => ['dischargeLowerLimit', 'maximumChargingCurrent'],
-            'validate' => function($response, $expectedValue) {
+            case 'dischargeLimit':
                 if (!isset($response['dischargeLowerLimit'])) return false;
                 $expectedPromille = $expectedValue * 10;
                 return abs($response['dischargeLowerLimit'] - $expectedPromille) < 5;
-            },
-            'timeout' => 2500
-        ],
-        'REGMaxChargeCurrent' => [
-            'fields' => ['maximumChargingCurrent'],
-            'validate' => function($response, $expectedValue) {
+            case 'maxCurrent':
                 return isset($response['maximumChargingCurrent']) && 
                        $response['maximumChargingCurrent'] == $expectedValue;
-            },
-            'timeout' => 2000
-        ],
-        'REGRequestSettings' => [
-            'fields' => ['soc', 'totalInput', 'totalOutput'],
-            'validate' => function($response) {
-                // Settings request ist erfolgreich wenn wir basics haben
+            case 'settings':
                 return isset($response['soc']);
-            },
-            'timeout' => 3000
-        ]
-    ];
+            default:
+                return true;
+        }
+    }
     
     /**
      * Wartet intelligent auf eine valide Response
      */
     public static function waitForValidResponse($client, $deviceId, $command, $value = null) {
-        $expectation = self::$commandExpectations[$command] ?? null;
+        $expectations = self::getCommandExpectations();
+        $expectation = isset($expectations[$command]) ? $expectations[$command] : null;
         
         if (!$expectation) {
             // Unbekannter Command - generisches Waiting
@@ -109,7 +121,7 @@ class FossibotResponseValidator {
         $client->requestDeviceSettings($deviceId);
         
         // Smart Polling mit Backoff
-        $pollIntervals = [50, 100, 100, 200, 200, 500]; // ms
+        $pollIntervals = array(50, 100, 100, 200, 200, 500); // ms
         $pollIndex = 0;
         
         IPS_LogMessage("ResponseValidator", "Waiting for {$command} response (timeout: {$expectation['timeout']}ms)");
@@ -134,7 +146,7 @@ class FossibotResponseValidator {
                 $lastStatus = $status;
                 
                 // Debug welche Felder wir haben
-                $hasFields = [];
+                $hasFields = array();
                 foreach ($expectation['fields'] as $field) {
                     if (isset($status[$field])) {
                         $hasFields[] = $field;
@@ -147,16 +159,15 @@ class FossibotResponseValidator {
                 
                 // Validierung
                 if (self::hasRequiredFields($status, $expectation['fields'])) {
-                    $validator = $expectation['validate'];
-                    if ($validator($status, $value)) {
+                    if (self::validateResponse($expectation['validateType'], $status, $value)) {
                         $elapsed = round((microtime(true) - $startTime) * 1000);
                         IPS_LogMessage("ResponseValidator", "✅ Valid response for {$command} after {$elapsed}ms");
-                        return [
+                        return array(
                             'success' => true,
                             'data' => $status,
                             'time' => $elapsed,
                             'updates' => $updateCount
-                        ];
+                        );
                     } else {
                         IPS_LogMessage("ResponseValidator", "Fields present but validation failed");
                     }
@@ -170,14 +181,14 @@ class FossibotResponseValidator {
         
         IPS_LogMessage("ResponseValidator", "⚠️ Timeout for {$command} after {$elapsed}ms. Missing: " . implode(', ', $missing));
         
-        return [
+        return array(
             'success' => false,
             'partial' => $lastStatus,
             'missing' => $missing,
             'timeout' => true,
             'time' => $elapsed,
             'updates' => $updateCount
-        ];
+        );
     }
     
     /**
@@ -198,11 +209,11 @@ class FossibotResponseValidator {
         $status = $client->getDeviceStatus($deviceId);
         $elapsed = round((microtime(true) - $startTime) * 1000);
         
-        return [
+        return array(
             'success' => !empty($status),
             'data' => $status,
             'time' => $elapsed
-        ];
+        );
     }
     
     /**
@@ -223,7 +234,7 @@ class FossibotResponseValidator {
      * Gibt fehlende Felder zurück
      */
     private static function getMissingFields($data, $requiredFields) {
-        $missing = [];
+        $missing = array();
         
         if (!is_array($data)) {
             return $requiredFields;
@@ -242,7 +253,7 @@ class FossibotResponseValidator {
      * Prüft ob ein Command Settings betrifft
      */
     public static function isSettingsCommand($command) {
-        $settingsCommands = [
+        $settingsCommands = array(
             'REGChargeUpperLimit',
             'REGMaxChargeCurrent',
             'REGDischargeLowerLimit',
@@ -250,7 +261,7 @@ class FossibotResponseValidator {
             'REGACStandbyTime',
             'REGDCStandbyTime',
             'REGStopChargeAfter'
-        ];
+        );
         
         return in_array($command, $settingsCommands);
     }

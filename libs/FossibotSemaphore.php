@@ -6,13 +6,13 @@
 
 class FossibotSemaphore {
     
-    private static $activeSemaphores = [];
-    private static $statistics = [
+    private static $activeSemaphores = array();
+    private static $statistics = array(
         'acquired' => 0,
         'released' => 0,
         'timeouts' => 0,
         'conflicts' => 0
-    ];
+    );
     
     /**
      * Versucht ein Semaphore zu erwerben

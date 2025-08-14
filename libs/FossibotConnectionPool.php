@@ -5,8 +5,8 @@
  */
 
 class FossibotConnectionPool {
-    private static $connections = [];
-    private static $locks = [];
+    private static $connections = array();
+    private static $locks = array();
     
     /**
      * Holt eine gesunde Connection aus dem Pool oder erstellt eine neue
