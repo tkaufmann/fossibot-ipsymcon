@@ -550,9 +550,22 @@ class FossibotDevice extends IPSModule
             return false;
         }
         
-        $this->SetValue('ConnectionStatus', "Setze Entladelimit auf {$percent}%...");
+        // Status anzeigen
+        $this->SetValue('ConnectionStatus', "Ändere Entladelimit auf {$percent}%...");
+        $this->LogMessage("Setze Entladelimit auf {$percent}%", KL_NOTIFY);
+        
         $promille = $percent * 10; // Konvertierung zu Promille
-        return $this->SendDeviceCommand('REGDischargeLowerLimit', $promille, $statusUpdate);
+        
+        // Command senden OHNE auto-refresh (false)
+        $result = $this->SendDeviceCommand('REGDischargeLowerLimit', $promille, false);
+        
+        if ($result) {
+            // Timer temporär auf 3s verkürzen für schnelles Update
+            $this->SetTimerInterval('UpdateTimer', 3000);
+            $this->LogMessage("Timer auf 3s gesetzt für Entladelimit-Update", KL_DEBUG);
+        }
+        
+        return $result;
     }
 
 
