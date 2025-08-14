@@ -24,10 +24,6 @@
         {
             "type": "Label",
             "caption": "Das Gerät wird automatisch in dem angegebenen Intervall aktualisiert."
-        },
-        {
-            "type": "Label",
-            "caption": "⚠️ Wichtig: Häufige Updates können zum Logout aus der Fossibot App führen!"
         }
     ],
     "actions": [

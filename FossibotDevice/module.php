@@ -560,14 +560,19 @@ class FossibotDevice extends IPSModule
             $devices = $client->getDevices();
             $client->connectMqtt();
             
-            // Befehl senden und gleichzeitig Status-Update anfordern (parallel!)
+            // Befehl senden (Settings-Request nur bei echten Settings-Befehlen)
             $this->LogMessage("Sende Befehl: $command mit Wert: " . json_encode($value), KL_DEBUG);
             $result = $client->sendCommand($deviceId, $command, $value);
-            $client->requestDeviceSettings($deviceId); // Parallel Status anfordern!
             
-            // Smart waiting für Response (reduziert auf 1.5s)
-            $gotResponse = $client->waitForResponse(1.5);
-            $this->LogMessage('Response erhalten: ' . ($gotResponse ? 'JA' : 'NEIN'), KL_DEBUG);
+            // Nur bei Settings-Befehlen parallel Status anfordern
+            if ($this->isSettingsCommand($command)) {
+                $client->requestDeviceSettings($deviceId);
+            }
+            
+            // Smart waiting für Response (optimiert auf 1s für Schaltbefehle)
+            $timeout = $this->isSettingsCommand($command) ? 1.5 : 1.0; // Schaltbefehle sind schneller
+            $gotResponse = $client->waitForResponse($timeout);
+            $this->LogMessage("Response erhalten: " . ($gotResponse ? 'JA' : 'NEIN') . " (${timeout}s)", KL_DEBUG);
             
             if ($gotResponse) {
                 $this->SetValue('ConnectionStatus', 'Online');
@@ -634,13 +639,8 @@ class FossibotDevice extends IPSModule
             'REGDischargeLowerLimit',
             'REGUSBStandbyTime',
             'REGACStandbyTime',
-            'REGDCStandbyTime',
-            'REGEnableACOutput',
-            'REGDisableACOutput',
-            'REGEnableDCOutput', 
-            'REGDisableDCOutput',
-            'REGEnableUSBOutput',
-            'REGDisableUSBOutput'
+            'REGDCStandbyTime'
+            // Output-Befehle sind KEINE Settings - sie brauchen kein Settings-Refresh!
         ];
         
         return in_array($command, $settingsCommands);
