@@ -266,4 +266,31 @@ class ModbusHelper {
     public static function getRegisterInfo($register) {
         return isset(self::$registers[$register]) ? self::$registers[$register] : null;
     }
+    
+    /**
+     * Prüft ob ein Command sicher ausführbar ist
+     * CRITICAL: Verhindert gefährliche Commands die das Gerät beschädigen können
+     */
+    public static function isSafeCommand($command) {
+        // CRITICAL: Whitelist of safe commands to prevent device damage
+        // Diese Liste ist identisch mit SydpowerClient::$safeCommands
+        $safeCommands = [
+            'REGRequestSettings',
+            'REGMaxChargeCurrent',
+            'REGChargeUpperLimit', 
+            'REGDischargeLowerLimit',
+            'REGStopChargeAfter',
+            'REGEnableUSBOutput',
+            'REGDisableUSBOutput',
+            'REGEnableDCOutput',
+            'REGDisableDCOutput',
+            'REGEnableACOutput',
+            'REGDisableACOutput'
+            // DANGEROUS COMMANDS INTENTIONALLY EXCLUDED:
+            // - REGSleepTime (value 0 bricks device!)
+            // - Any register modification not explicitly tested
+        ];
+        
+        return in_array($command, $safeCommands, true);
+    }
 }

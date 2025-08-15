@@ -498,25 +498,10 @@ class SydpowerClient {
                 throw new Exception("MQTT not connected. Call connectMqtt() first.");
             }
         
-        // CRITICAL: Whitelist of safe commands to prevent device damage
-        $safeCommands = [
-            'REGRequestSettings',
-            'REGMaxChargeCurrent',
-            'REGChargeUpperLimit', 
-            'REGDischargeLowerLimit',
-            'REGStopChargeAfter',
-            'REGEnableUSBOutput',
-            'REGDisableUSBOutput',
-            'REGEnableDCOutput',
-            'REGDisableDCOutput',
-            'REGEnableACOutput',
-            'REGDisableACOutput'
-            // DANGEROUS COMMANDS INTENTIONALLY EXCLUDED:
-            // - REGSleepTime (value 0 bricks device!)
-            // - Any register modification not explicitly tested
-        ];
+        // CRITICAL: Zentrale Sicherheitsprüfung über ModbusHelper
+        require_once __DIR__ . '/ModbusHelper.php';
         
-        if (!in_array($command, $safeCommands, true)) {
+        if (!ModbusHelper::isSafeCommand($command)) {
             throw new Exception("CRITICAL: Command '$command' is not in the safe commands whitelist. BLOCKING to prevent device damage!");
         }
         
