@@ -420,46 +420,46 @@ class FossibotDevice extends IPSModuleStrict
     /**
      * AC-Ausgang ein-/ausschalten
      */
-    public function SetACOutput(bool $enabled, bool $statusUpdate = true): bool
+    public function SetACOutput(bool $enabled): bool
     {
         $command = $enabled ? 'REGEnableACOutput' : 'REGDisableACOutput';
         $statusText = $enabled ? 'Schalte AC-Ausgang ein' : 'Schalte AC-Ausgang aus';
         
         $this->SetValue('ConnectionStatus', $statusText . '...');
         $this->LogMessage("AC Output: " . ($enabled ? 'EIN' : 'AUS'), KL_NOTIFY);
-        return $this->SendDeviceCommand($command, null, $statusUpdate);
+        return $this->SendDeviceCommand($command, null, true);
     }
 
     /**
      * DC-Ausgang ein-/ausschalten
      */
-    public function SetDCOutput(bool $enabled, bool $statusUpdate = true): bool
+    public function SetDCOutput(bool $enabled): bool
     {
         $command = $enabled ? 'REGEnableDCOutput' : 'REGDisableDCOutput';
         $statusText = $enabled ? 'Schalte DC-Ausgang ein' : 'Schalte DC-Ausgang aus';
         
         $this->SetValue('ConnectionStatus', $statusText . '...');
         $this->LogMessage("DC Output: " . ($enabled ? 'EIN' : 'AUS'), KL_NOTIFY);
-        return $this->SendDeviceCommand($command, null, $statusUpdate);
+        return $this->SendDeviceCommand($command, null, true);
     }
 
     /**
      * USB-Ausgang ein-/ausschalten
      */
-    public function SetUSBOutput(bool $enabled, bool $statusUpdate = true): bool
+    public function SetUSBOutput(bool $enabled): bool
     {
         $command = $enabled ? 'REGEnableUSBOutput' : 'REGDisableUSBOutput';
         $statusText = $enabled ? 'Schalte USB-Ausgang ein' : 'Schalte USB-Ausgang aus';
         
         $this->SetValue('ConnectionStatus', $statusText . '...');
         $this->LogMessage("USB Output: " . ($enabled ? 'EIN' : 'AUS'), KL_NOTIFY);
-        return $this->SendDeviceCommand($command, null, $statusUpdate);
+        return $this->SendDeviceCommand($command, null, true);
     }
 
     /**
      * Ladelimit setzen (60-100%)
      */
-    public function SetChargingLimit(int $percent, bool $statusUpdate = true): bool
+    public function SetChargingLimit(int $percent): bool
     {
         if ($percent < 60 || $percent > 100) {
             $this->LogMessage('Ladelimit muss zwischen 60-100% liegen', KL_ERROR);
@@ -488,7 +488,7 @@ class FossibotDevice extends IPSModuleStrict
     /**
      * Maximalen Ladestrom setzen (1-5A für F2400, max 1100W)
      */
-    public function SetMaxChargingCurrent(int $ampere, bool $statusUpdate = true): bool
+    public function SetMaxChargingCurrent(int $ampere): bool
     {
         // F2400 unterstützt nur 1-5A Ladestrom (max 1100W)
         if ($ampere < 1 || $ampere > 5) {
@@ -518,7 +518,7 @@ class FossibotDevice extends IPSModuleStrict
     /**
      * Lade-Timer setzen (in Minuten)
      */
-    public function SetChargeTimer(int $minutes, bool $statusUpdate = true): bool
+    public function SetChargeTimer(int $minutes): bool
     {
         if ($minutes < 0) {
             $this->LogMessage('Lade-Timer muss positiv sein', KL_ERROR);
@@ -527,13 +527,13 @@ class FossibotDevice extends IPSModuleStrict
         }
         
         $this->SetValue('ConnectionStatus', "Setze Lade-Timer auf {$minutes} Min...");
-        return $this->SendDeviceCommand('REGStopChargeAfter', $minutes, $statusUpdate);
+        return $this->SendDeviceCommand('REGStopChargeAfter', $minutes, true);
     }
 
     /**
      * Entladelimit setzen (0-50%)
      */
-    public function SetDischargeLimit(int $percent, bool $statusUpdate = true): bool
+    public function SetDischargeLimit(int $percent): bool
     {
         if ($percent < 0 || $percent > 50) {
             $this->LogMessage('Entladelimit muss zwischen 0-50% liegen', KL_ERROR);

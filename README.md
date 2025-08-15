@@ -145,13 +145,10 @@ AC-Ausgang: On        (Bypass-Modus bei vollem Akku)
 - **Gesamt-Eingang** wird 0W (kein Netz-Input mehr)
 
 
-## 🎮 Skript-Integration ✅
-
-✅ **Die PHP-Funktionen wurden erfolgreich implementiert und getestet:**
-
-**Funktions-Signatur:** Alle FBT_* Funktionen verwenden die Instanz-ID als ersten Parameter, gefolgt von den eigentlichen Parametern.
+## 🎮 Skript-Integration
 
 **Status-Update Parameter:** Der letzte `$statusUpdate` Parameter (boolean) bestimmt, ob nach dem Befehl automatisch ein Status-Update ausgelöst wird:
+
 - `true`: Sofortiges Status-Update (empfohlen für wichtige Änderungen)
 - `false`: Kein automatisches Update (schneller, Update erfolgt beim nächsten Timer)
 
