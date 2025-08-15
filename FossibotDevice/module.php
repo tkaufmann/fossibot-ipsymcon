@@ -1003,8 +1003,14 @@ class FossibotDevice extends IPSModuleStrict
             return null;
         }
         
-        $email = IPS_GetProperty($discoveryInstance, 'Email');
-        $password = IPS_GetProperty($discoveryInstance, 'Password');
+        // Sicherheitsprüfung für Properties
+        try {
+            $email = IPS_GetProperty($discoveryInstance, 'Email');
+            $password = IPS_GetProperty($discoveryInstance, 'Password');
+        } catch (Exception $e) {
+            $this->LogMessage('Fehler beim Zugriff auf Discovery-Properties: ' . $e->getMessage(), KL_ERROR);
+            return null;
+        }
         
         if (empty($email) || empty($password)) {
             $this->LogMessage('Discovery-Instanz hat keine Zugangsdaten konfiguriert', KL_ERROR);
