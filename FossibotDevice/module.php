@@ -192,11 +192,11 @@ class FossibotDevice extends IPSModule
             require_once __DIR__ . '/../libs/FossibotConnectionPool.php';
             require_once __DIR__ . '/../libs/FossibotSemaphore.php';
             
-            // Acquire semaphore to prevent collisions
-            if (!FossibotSemaphore::acquire('status_update', 5000)) {
-                $this->LogMessage('Status-Update blockiert - andere Operation läuft', KL_WARNING);
-                $this->SetValue('ConnectionStatus', 'Warte auf andere Operation...');
-                return false;
+            // Acquire semaphore to prevent collisions - if already running, mission accomplished!
+            if (!FossibotSemaphore::acquire('status_update', 100)) {
+                $this->LogMessage('Status-Update bereits in Arbeit - Mission erfüllt', KL_DEBUG);
+                $this->SetValue('ConnectionStatus', 'Update läuft bereits');
+                return true; // Mission erfüllt, anderes Update läuft schon
             }
             
             try {
