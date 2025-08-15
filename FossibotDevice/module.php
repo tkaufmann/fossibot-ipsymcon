@@ -323,12 +323,19 @@ class FossibotDevice extends IPSModule
      */
     public function FBT_SetACOutput(bool $enabled, bool $statusUpdate = true): bool
     {
-        $command = $enabled ? 'REGEnableACOutput' : 'REGDisableACOutput';
         $statusText = $enabled ? 'Schalte AC-Ausgang ein' : 'Schalte AC-Ausgang aus';
-
+        
+        // Status anzeigen
         $this->SetValue('ConnectionStatus', $statusText . '...');
         $this->LogMessage("AC Output: " . ($enabled ? 'EIN' : 'AUS'), KL_NOTIFY);
-        return $this->SendDeviceCommand($command, null, $statusUpdate);
+        
+        // Variable sofort setzen (optimistische UI)
+        $this->SetValue('ACOutput', $enabled);
+        
+        // Timer sofort auslösen (nutzt bewährte Timer-Logik für Command-Senden)
+        $this->SetTimerInterval('UpdateTimer', 1); // 1ms = sofort
+        
+        return true;
     }
 
     /**
@@ -336,12 +343,19 @@ class FossibotDevice extends IPSModule
      */
     public function FBT_SetDCOutput(bool $enabled, bool $statusUpdate = true): bool
     {
-        $command = $enabled ? 'REGEnableDCOutput' : 'REGDisableDCOutput';
         $statusText = $enabled ? 'Schalte DC-Ausgang ein' : 'Schalte DC-Ausgang aus';
-
+        
+        // Status anzeigen
         $this->SetValue('ConnectionStatus', $statusText . '...');
         $this->LogMessage("DC Output: " . ($enabled ? 'EIN' : 'AUS'), KL_NOTIFY);
-        return $this->SendDeviceCommand($command, null, $statusUpdate);
+        
+        // Variable sofort setzen (optimistische UI)
+        $this->SetValue('DCOutput', $enabled);
+        
+        // Timer sofort auslösen (nutzt bewährte Timer-Logik für Command-Senden)
+        $this->SetTimerInterval('UpdateTimer', 1); // 1ms = sofort
+        
+        return true;
     }
 
     /**
@@ -349,12 +363,19 @@ class FossibotDevice extends IPSModule
      */
     public function FBT_SetUSBOutput(bool $enabled, bool $statusUpdate = true): bool
     {
-        $command = $enabled ? 'REGEnableUSBOutput' : 'REGDisableUSBOutput';
         $statusText = $enabled ? 'Schalte USB-Ausgang ein' : 'Schalte USB-Ausgang aus';
-
+        
+        // Status anzeigen
         $this->SetValue('ConnectionStatus', $statusText . '...');
         $this->LogMessage("USB Output: " . ($enabled ? 'EIN' : 'AUS'), KL_NOTIFY);
-        return $this->SendDeviceCommand($command, null, $statusUpdate);
+        
+        // Variable sofort setzen (optimistische UI)
+        $this->SetValue('USBOutput', $enabled);
+        
+        // Timer sofort auslösen (nutzt bewährte Timer-Logik für Command-Senden)
+        $this->SetTimerInterval('UpdateTimer', 1); // 1ms = sofort
+        
+        return true;
     }
 
     /**
