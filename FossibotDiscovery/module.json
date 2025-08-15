@@ -8,5 +8,6 @@
     "parentRequirements": [],
     "childRequirements": [],
     "implemented": [],
-    "prefix": "FBD"
+    "prefix": "FBD",
+    "discovery": true
 }
