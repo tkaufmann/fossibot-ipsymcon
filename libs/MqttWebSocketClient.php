@@ -17,7 +17,7 @@ class MqttWebSocketClient {
     private $subscriptions = [];
     private $messageHandlers = [];
     
-    public function __construct($host, $port = 8083, $path = '/mqtt') {
+    public function __construct(string $host, int $port = 8083, string $path = '/mqtt') {
         $this->host = $host;
         $this->port = $port;
         $this->path = $path;
@@ -27,12 +27,12 @@ class MqttWebSocketClient {
         $this->clientId = 'client_' . $hexString . '_' . $timestampMs;
     }
     
-    public function setCredentials($username, $password) {
+    public function setCredentials(string $username, string $password): void {
         $this->username = $username;
         $this->password = $password;
     }
     
-    public function connect() {
+    public function connect(): bool {
         // Connecting to MQTT WebSocket (silent)
         
         // Create WebSocket connection
@@ -90,7 +90,7 @@ class MqttWebSocketClient {
         return true;
     }
     
-    private function sendMqttConnect() {
+    private function sendMqttConnect(): void {
         $protocolName = 'MQTT';
         $protocolLevel = 4;
         $connectFlags = 0x02; // Clean session
@@ -133,7 +133,7 @@ class MqttWebSocketClient {
         $this->sendWebSocketFrame($mqttPacket, 0x2); // Binary frame
     }
     
-    private function encodeRemainingLength($length) {
+    private function encodeRemainingLength(int $length): string {
         $bytes = '';
         do {
             $byte = $length % 128;
@@ -163,7 +163,7 @@ class MqttWebSocketClient {
         return $length;
     }
     
-    private function sendWebSocketFrame($data, $opcode = 0x1) {
+    private function sendWebSocketFrame(string $data, int $opcode = 0x1): void {
         $frame = '';
         $frame .= pack('C', 0x80 | $opcode); // FIN bit + opcode
         
@@ -192,7 +192,7 @@ class MqttWebSocketClient {
         fwrite($this->socket, $frame);
     }
     
-    private function readMqttResponse() {
+    private function readMqttResponse(): bool {
         // Read WebSocket frame
         $frame = $this->readWebSocketFrame();
         if ($frame === false) {
@@ -250,7 +250,7 @@ class MqttWebSocketClient {
         return $payload;
     }
     
-    public function subscribe($topic) {
+    public function subscribe(string $topic): void {
         if (!$this->connected) {
             throw new Exception("Not connected to MQTT broker");
         }
@@ -273,7 +273,7 @@ class MqttWebSocketClient {
         // Subscribed to topic: $topic
     }
     
-    public function publish($topic, $message, $qos = 0) {
+    public function publish(string $topic, $message, int $qos = 0): void {
         if (!$this->connected) {
             throw new Exception("Not connected to MQTT broker");
         }
@@ -309,11 +309,11 @@ class MqttWebSocketClient {
         // Published to topic: $topic (QoS $qos)
     }
     
-    public function onMessage($callback) {
+    public function onMessage(callable $callback): void {
         $this->messageHandlers[] = $callback;
     }
     
-    public function loop($timeout = 30) {
+    public function loop(float $timeout = 30): void {
         $endTime = time() + $timeout;
         
         while (time() < $endTime && $this->connected) {
@@ -332,7 +332,7 @@ class MqttWebSocketClient {
         }
     }
     
-    private function handleMqttMessage($frame) {
+    private function handleMqttMessage(string $frame): void {
         if (strlen($frame) < 2) return;
         
         $packetType = (ord($frame[0]) >> 4) & 0x0F;
@@ -362,7 +362,7 @@ class MqttWebSocketClient {
         }
     }
     
-    public function disconnect() {
+    public function disconnect(): void {
         if ($this->connected && $this->socket) {
             // Send DISCONNECT packet
             $packet = pack('C', 0xE0) . pack('C', 0); // DISCONNECT with 0 remaining length
@@ -374,7 +374,7 @@ class MqttWebSocketClient {
         }
     }
     
-    public function isConnected() {
+    public function isConnected(): bool {
         return $this->connected;
     }
 }

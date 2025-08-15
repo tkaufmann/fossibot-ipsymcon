@@ -11,7 +11,7 @@ class FossibotConnectionPool {
     /**
      * Holt eine gesunde Connection aus dem Pool oder erstellt eine neue
      */
-    public static function getConnection($email, $password, $instanceId) {
+    public static function getConnection(string $email, string $password, int $instanceId) {
         $key = md5($email . '_' . $instanceId);
         
         // Lock-Check entfernt - wir wollen Connection Reuse erlauben!
@@ -39,7 +39,7 @@ class FossibotConnectionPool {
     /**
      * Prüft ob eine Connection noch gesund ist
      */
-    private static function isConnectionHealthy($conn) {
+    private static function isConnectionHealthy(array $conn): bool {
         if (!isset($conn['client']) || !$conn['client']) {
             return false;
         }
@@ -89,7 +89,7 @@ class FossibotConnectionPool {
     /**
      * Erstellt eine neue Connection mit Caching
      */
-    private static function createConnection($email, $password, $key) {
+    private static function createConnection(string $email, string $password, string $key) {
         require_once __DIR__ . '/SydpowerClient.php';
         
         $start = microtime(true);
@@ -158,7 +158,7 @@ class FossibotConnectionPool {
     /**
      * Gibt eine Connection frei
      */
-    public static function releaseConnection($instanceId) {
+    public static function releaseConnection(int $instanceId): void {
         // Alle möglichen Keys durchgehen
         foreach (self::$locks as $key => $time) {
             if (strpos($key, $instanceId) !== false) {
@@ -171,7 +171,7 @@ class FossibotConnectionPool {
     /**
      * Räumt eine Connection auf
      */
-    private static function cleanupConnection($key) {
+    private static function cleanupConnection(string $key): void {
         if (isset(self::$connections[$key])) {
             try {
                 if (isset(self::$connections[$key]['client'])) {
@@ -188,7 +188,7 @@ class FossibotConnectionPool {
     /**
      * Räumt alte Connections auf
      */
-    public static function cleanup() {
+    public static function cleanup(): void {
         $cleaned = 0;
         foreach (self::$connections as $key => $conn) {
             // Connections älter als 30s oder lange nicht benutzt
@@ -205,7 +205,7 @@ class FossibotConnectionPool {
     /**
      * Gibt Pool-Statistiken zurück
      */
-    public static function getStats() {
+    public static function getStats(): array {
         $stats = [
             'total_connections' => count(self::$connections),
             'active_locks' => count(self::$locks),
@@ -227,7 +227,7 @@ class FossibotConnectionPool {
     /**
      * Reset des gesamten Pools (für Debugging)
      */
-    public static function reset() {
+    public static function reset(): void {
         foreach (self::$connections as $key => $conn) {
             self::cleanupConnection($key);
         }

@@ -17,7 +17,7 @@ class FossibotSemaphore {
     /**
      * Versucht ein Semaphore zu erwerben
      */
-    public static function acquire($resource, $timeoutMs = 5000) {
+    public static function acquire(string $resource, int $timeoutMs = 5000): bool {
         $key = "Fossibot_" . $resource;
         $startTime = microtime(true);
         
@@ -75,7 +75,7 @@ class FossibotSemaphore {
     /**
      * Versucht ein Semaphore zu erwerben (non-blocking)
      */
-    public static function tryAcquire($resource) {
+    public static function tryAcquire(string $resource): bool {
         $key = "Fossibot_" . $resource;
         
         if (IPS_SemaphoreEnter($key, 10)) {
@@ -97,7 +97,7 @@ class FossibotSemaphore {
     /**
      * Gibt ein Semaphore frei
      */
-    public static function release($resource) {
+    public static function release(string $resource): bool {
         if (!isset(self::$activeSemaphores[$resource])) {
             IPS_LogMessage("FossibotSemaphore", "⚠️ Trying to release non-acquired semaphore: {$resource}");
             return false;
@@ -127,7 +127,7 @@ class FossibotSemaphore {
     /**
      * Gibt alle aktiven Semaphores frei (für Cleanup)
      */
-    public static function releaseAll() {
+    public static function releaseAll(): void {
         $count = count(self::$activeSemaphores);
         
         if ($count > 0) {
@@ -145,7 +145,7 @@ class FossibotSemaphore {
     /**
      * Führt eine Funktion mit Semaphore-Schutz aus
      */
-    public static function withLock($resource, $callback, $timeoutMs = 5000) {
+    public static function withLock(string $resource, callable $callback, int $timeoutMs = 5000) {
         if (!self::acquire($resource, $timeoutMs)) {
             return false;
         }
@@ -164,14 +164,14 @@ class FossibotSemaphore {
     /**
      * Prüft ob ein Semaphore aktiv ist
      */
-    public static function isLocked($resource) {
+    public static function isLocked(string $resource): bool {
         return isset(self::$activeSemaphores[$resource]);
     }
     
     /**
      * Gibt Statistiken zurück
      */
-    public static function getStatistics() {
+    public static function getStatistics(): array {
         $stats = self::$statistics;
         $stats['active'] = count(self::$activeSemaphores);
         
@@ -191,7 +191,7 @@ class FossibotSemaphore {
     /**
      * Reset Statistiken
      */
-    public static function resetStatistics() {
+    public static function resetStatistics(): void {
         self::$statistics = [
             'acquired' => 0,
             'released' => 0,
@@ -203,7 +203,7 @@ class FossibotSemaphore {
     /**
      * Cleanup alte/stuck Semaphores
      */
-    public static function cleanup($maxAgeSeconds = 60) {
+    public static function cleanup(int $maxAgeSeconds = 60): int {
         $cleaned = 0;
         $now = microtime(true);
         
