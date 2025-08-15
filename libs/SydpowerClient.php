@@ -227,7 +227,7 @@ class SydpowerClient {
         }
     }
     
-    public function authenticate() {
+    public function authenticate(): bool {
         // Try to use cached tokens first
         $cachedTokens = $this->tokenCache->getValidTokens();
         if ($cachedTokens) {
@@ -257,33 +257,33 @@ class SydpowerClient {
         return true;
     }
     
-    public function setDevices($devices) {
+    public function setDevices(array $devices): void {
         $this->devices = $devices;
     }
     
-    public function setAccessToken($token) {
+    public function setAccessToken(?string $token): void {
         $this->accessToken = $token;
     }
     
-    public function setMqttToken($token) {
+    public function setMqttToken(?string $token): void {
         $this->mqttAccessToken = $token;
     }
     
-    public function getAccessToken() {
+    public function getAccessToken(): ?string {
         return $this->accessToken;
     }
     
-    public function getMqttToken() {
+    public function getMqttToken(): ?string {
         return $this->mqttAccessToken;
     }
     
-    public function isHealthy() {
+    public function isHealthy(): bool {
         // Connection ist gesund wenn MQTT connected ist
         // Activity-Zeit ist nicht relevant für Health
         return $this->mqttConnected && $this->mqttClient !== null;
     }
     
-    public function isMqttConnected() {
+    public function isMqttConnected(): bool {
         return $this->mqttConnected;
     }
     
@@ -305,7 +305,7 @@ class SydpowerClient {
         });
     }
     
-    public function connectMqtt() {
+    public function connectMqtt(): bool {
         return $this->apiCallWithRetry(function() {
             if (!$this->mqttAccessToken) {
                 throw new Exception("MQTT access token not available. Call authenticate() first.");
@@ -488,11 +488,11 @@ class SydpowerClient {
         }
     }
     
-    public function getDeviceIds() {
+    public function getDeviceIds(): array {
         return array_keys($this->devices);
     }
     
-    public function sendCommand($deviceId, $command, $value = null) {
+    public function sendCommand(string $deviceId, string $command, $value = null): array {
         return $this->apiCallWithRetry(function() use ($deviceId, $command, $value) {
             if (!$this->mqttConnected) {
                 throw new Exception("MQTT not connected. Call connectMqtt() first.");
@@ -595,14 +595,14 @@ class SydpowerClient {
         }); // End of apiCallWithRetry
     }
     
-    public function getDeviceStatus($deviceId) {
+    public function getDeviceStatus(string $deviceId) {
         if (isset($this->devices[$deviceId])) {
             return $this->devices[$deviceId];
         }
         return false;
     }
     
-    public function waitForResponse($timeout = 3.0) {
+    public function waitForResponse(float $timeout = 3.0): bool {
         if (!$this->mqttConnected) {
             return false;
         }
@@ -622,7 +622,7 @@ class SydpowerClient {
         return false;
     }
     
-    public function waitForSettingsResponse($timeout = 2.0) {
+    public function waitForSettingsResponse(float $timeout = 2.0): bool {
         if (!$this->mqttConnected) {
             return false;
         }
@@ -645,7 +645,7 @@ class SydpowerClient {
         return false;
     }
     
-    public function hasReceivedResponse() {
+    public function hasReceivedResponse(): bool {
         return $this->responseReceived;
     }
     
@@ -653,19 +653,19 @@ class SydpowerClient {
         return $this->lastMqttResponse;
     }
     
-    public function quickPing($deviceId) {
+    public function quickPing(string $deviceId): bool {
         // Quick connectivity check with 1 second timeout
         $this->responseReceived = false;
         $this->sendCommand($deviceId, 'REGRequestSettings');
         return $this->waitForResponse(1.0);
     }
     
-    public function requestDeviceSettings($deviceId) {
+    public function requestDeviceSettings(string $deviceId): void {
         // Request fresh settings from device
         $this->sendCommand($deviceId, 'REGRequestSettings');
     }
     
-    public function listenForUpdates($timeout = 30) {
+    public function listenForUpdates(float $timeout = 30): bool {
         if (!$this->mqttConnected) {
             throw new Exception("MQTT not connected. Call connectMqtt() first.");
         }
@@ -678,7 +678,7 @@ class SydpowerClient {
     /**
      * Wait for any data update after command (universal for all command types)
      */
-    public function waitForDataUpdate($deviceId, $timeout = 2.0) {
+    public function waitForDataUpdate(string $deviceId, float $timeout = 2.0): bool {
         if (!$this->mqttConnected) {
             return false;
         }
@@ -703,7 +703,7 @@ class SydpowerClient {
     /**
      * Wait for specific data fields to be present
      */
-    public function waitForSpecificData($deviceId, $requiredFields, $timeout = 2.0) {
+    public function waitForSpecificData(string $deviceId, array $requiredFields, float $timeout = 2.0): bool {
         if (!$this->mqttConnected) {
             return false;
         }
@@ -732,7 +732,7 @@ class SydpowerClient {
         return false;
     }
     
-    public function disconnect() {
+    public function disconnect(): void {
         if ($this->mqttClient && $this->mqttConnected) {
             $this->mqttClient->disconnect();
             $this->mqttConnected = false;
@@ -743,7 +743,7 @@ class SydpowerClient {
         return $this->tokenCache->getTokenInfo();
     }
     
-    public function hasValidCachedTokens() {
+    public function hasValidCachedTokens(): bool {
         if (!$this->tokenCache) return false;
         return $this->tokenCache->getValidTokens() !== null;
     }
@@ -761,11 +761,11 @@ class SydpowerClient {
         ];
     }
     
-    public function clearTokenCache() {
+    public function clearTokenCache(): void {
         $this->tokenCache->clearCache();
     }
     
-    public function getAllDeviceData() {
+    public function getAllDeviceData(): array {
         return $this->devices;
     }
 }

@@ -107,14 +107,14 @@ class ModbusHelper {
         ]
     ];
     
-    public static function intToHighLow($value) {
+    public static function intToHighLow(int $value): array {
         return [
             'low' => $value & 255,
             'high' => ($value >> 8) & 255
         ];
     }
     
-    public static function highLowToInt($high, $low) {
+    public static function highLowToInt(int $high, int $low): int {
         return (($high & 255) << 8) | ($low & 255);
     }
     
@@ -155,7 +155,7 @@ class ModbusHelper {
         return $frame;
     }
     
-    public static function getWriteModbus($address, $register, $value) {
+    public static function getWriteModbus(int $address, int $register, int $value): array {
         $highLow = self::intToHighLow($value);
         $registerHighLow = self::zi($register);
         
@@ -167,7 +167,7 @@ class ModbusHelper {
         ], false);
     }
     
-    public static function getReadModbus($address, $count) {
+    public static function getReadModbus(int $address, int $count): array {
         $registerHighLow = self::zi(0);
         $countLow = $count & 255;
         $countHigh = ($count >> 8) & 255;
@@ -180,7 +180,7 @@ class ModbusHelper {
         ], false);
     }
     
-    public static function validateRegisterValue($register, $value) {
+    public static function validateRegisterValue(int $register, $value): array {
         if (!isset(self::$registers[$register])) {
             throw new Exception("CRITICAL: Unknown register $register - blocking to prevent device damage!");
         }
@@ -224,46 +224,46 @@ class ModbusHelper {
     }
     
     // Convenience methods for common commands
-    public static function getRequestSettingsCommand() {
+    public static function getRequestSettingsCommand(): array {
         return self::getReadModbus(self::REGISTER_MODBUS_ADDRESS, self::REGISTER_MODBUS_COUNT);
     }
     
-    public static function getMaxChargeCurrentCommand($value) {
+    public static function getMaxChargeCurrentCommand(int $value): array {
         $validation = self::validateRegisterValue(self::REGISTER_MAXIMUM_CHARGING_CURRENT, $value);
         return self::getWriteModbus(self::REGISTER_MODBUS_ADDRESS, self::REGISTER_MAXIMUM_CHARGING_CURRENT, $validation['value']);
     }
     
-    public static function getChargeUpperLimitCommand($value) {
+    public static function getChargeUpperLimitCommand(int $value): array {
         $validation = self::validateRegisterValue(self::REGISTER_CHARGING_LIMIT, $value);
         return self::getWriteModbus(self::REGISTER_MODBUS_ADDRESS, self::REGISTER_CHARGING_LIMIT, $validation['value']);
     }
     
-    public static function getDischargeLimitCommand($value) {
+    public static function getDischargeLimitCommand(int $value): array {
         $validation = self::validateRegisterValue(self::REGISTER_DISCHARGE_LIMIT, $value);
         return self::getWriteModbus(self::REGISTER_MODBUS_ADDRESS, self::REGISTER_DISCHARGE_LIMIT, $validation['value']);
     }
     
-    public static function getStopChargeAfterCommand($value) {
+    public static function getStopChargeAfterCommand(int $value): array {
         $validation = self::validateRegisterValue(self::REGISTER_STOP_CHARGE_AFTER, $value);
         return self::getWriteModbus(self::REGISTER_MODBUS_ADDRESS, self::REGISTER_STOP_CHARGE_AFTER, $validation['value']);
     }
     
-    public static function getUSBOutputCommand($enable) {
+    public static function getUSBOutputCommand(bool $enable): array {
         $value = $enable ? 1 : 0;
         return self::getWriteModbus(self::REGISTER_MODBUS_ADDRESS, self::REGISTER_USB_OUTPUT, $value);
     }
     
-    public static function getDCOutputCommand($enable) {
+    public static function getDCOutputCommand(bool $enable): array {
         $value = $enable ? 1 : 0;
         return self::getWriteModbus(self::REGISTER_MODBUS_ADDRESS, self::REGISTER_DC_OUTPUT, $value);
     }
     
-    public static function getACOutputCommand($enable) {
+    public static function getACOutputCommand(bool $enable): array {
         $value = $enable ? 1 : 0;
         return self::getWriteModbus(self::REGISTER_MODBUS_ADDRESS, self::REGISTER_AC_OUTPUT, $value);
     }
     
-    public static function getRegisterInfo($register) {
+    public static function getRegisterInfo(int $register): ?array {
         return isset(self::$registers[$register]) ? self::$registers[$register] : null;
     }
     
@@ -271,7 +271,7 @@ class ModbusHelper {
      * Prüft ob ein Command sicher ausführbar ist
      * CRITICAL: Verhindert gefährliche Commands die das Gerät beschädigen können
      */
-    public static function isSafeCommand($command) {
+    public static function isSafeCommand(string $command): bool {
         // CRITICAL: Whitelist of safe commands to prevent device damage
         // Diese Liste ist identisch mit SydpowerClient::$safeCommands
         $safeCommands = [

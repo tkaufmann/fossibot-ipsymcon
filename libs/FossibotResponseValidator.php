@@ -9,7 +9,7 @@ class FossibotResponseValidator {
     /**
      * Command-Erwartungen definieren was jeder Command als Response braucht
      */
-    private static function getCommandExpectations() {
+    private static function getCommandExpectations(): array {
         return array(
             'REGEnableACOutput' => array(
                 'fields' => array('acOutput', 'maximumChargingCurrent', 'totalOutput'),
@@ -52,7 +52,7 @@ class FossibotResponseValidator {
     /**
      * Validiert eine Response basierend auf dem Typ
      */
-    private static function validateResponse($type, $response, $expectedValue = null) {
+    private static function validateResponse($type, $response, $expectedValue = null): bool {
         switch ($type) {
             case 'acOn':
                 return isset($response['acOutput']) && $response['acOutput'] === true;
@@ -87,7 +87,7 @@ class FossibotResponseValidator {
     /**
      * Wartet intelligent auf eine valide Response
      */
-    public static function waitForValidResponse($client, $deviceId, $command, $value = null) {
+    public static function waitForValidResponse($client, $deviceId, $command, $value = null): array {
         $expectations = self::getCommandExpectations();
         $expectation = isset($expectations[$command]) ? $expectations[$command] : null;
         
@@ -184,7 +184,7 @@ class FossibotResponseValidator {
     /**
      * Generisches Warten für unbekannte Commands
      */
-    private static function genericWait($client, $deviceId, $timeoutMs) {
+    private static function genericWait($client, $deviceId, $timeoutMs): array {
         $startTime = microtime(true);
         $timeout = $timeoutMs / 1000;
         
@@ -209,7 +209,7 @@ class FossibotResponseValidator {
     /**
      * Prüft ob alle benötigten Felder vorhanden sind
      */
-    private static function hasRequiredFields($data, $fields) {
+    private static function hasRequiredFields($data, $fields): bool {
         if (!is_array($data)) return false;
         
         foreach ($fields as $field) {
@@ -223,7 +223,7 @@ class FossibotResponseValidator {
     /**
      * Gibt fehlende Felder zurück
      */
-    private static function getMissingFields($data, $requiredFields) {
+    private static function getMissingFields($data, $requiredFields): array {
         $missing = array();
         
         if (!is_array($data)) {
@@ -242,7 +242,7 @@ class FossibotResponseValidator {
     /**
      * Prüft ob ein Command Settings betrifft
      */
-    public static function isSettingsCommand($command) {
+    public static function isSettingsCommand($command): bool {
         $settingsCommands = array(
             'REGChargeUpperLimit',
             'REGMaxChargeCurrent',
@@ -259,7 +259,7 @@ class FossibotResponseValidator {
     /**
      * Prüft ob ein Command Outputs betrifft
      */
-    public static function isOutputCommand($command) {
+    public static function isOutputCommand($command): bool {
         return strpos($command, 'Output') !== false;
     }
 }

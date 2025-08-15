@@ -8,7 +8,7 @@ class TokenCache {
     
     private $cacheFile;
     
-    public function __construct($username) {
+    public function __construct(string $username) {
         // Create user-specific cache file
         $cacheDir = __DIR__ . '/cache';
         if (!is_dir($cacheDir)) {
@@ -17,7 +17,7 @@ class TokenCache {
         $this->cacheFile = $cacheDir . '/tokens_' . md5($username) . '.json';
     }
     
-    public function getValidTokens() {
+    public function getValidTokens(): ?array {
         if (!file_exists($this->cacheFile)) {
             return null;
         }
@@ -48,7 +48,7 @@ class TokenCache {
         }
     }
     
-    public function saveTokens($accessToken, $mqttAccessToken) {
+    public function saveTokens(string $accessToken, string $mqttAccessToken): void {
         $data = [
             'accessToken' => $accessToken,
             'mqttAccessToken' => $mqttAccessToken,
@@ -60,7 +60,7 @@ class TokenCache {
         // Tokens cached successfully
     }
     
-    public function clearCache() {
+    public function clearCache(): void {
         if (file_exists($this->cacheFile)) {
             unlink($this->cacheFile);
             // Token cache cleared
@@ -75,7 +75,7 @@ class TokenCache {
         return $payload;
     }
     
-    public function getTokenInfo() {
+    public function getTokenInfo(): string {
         $tokens = $this->getValidTokens();
         if (!$tokens) {
             return "No valid tokens cached";
