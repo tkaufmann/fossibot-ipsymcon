@@ -1,70 +1,87 @@
 # Fossibot IP-Symcon Module
 
-Ein IP-Symcon Modul zur Überwachung und Steuerung von Fossibot Powerstations über die Sydpower API.
+Ein **experimentelles** IP-Symcon Modul zur Überwachung und Steuerung von Fossibot Powerstations.
 
-## 🔋 Unterstützte Geräte
+⚠️ **WICHTIGER HINWEIS**: Dieses Projekt basiert auf **Reverse Engineering** der Fossibot-API und ist **experimentell**. Es funktioniert bei mir mit einem F2400, aber es gibt keine Garantien. Die Entwicklung erfolgte durch Trial-and-Error ohne Kenntnis der Geräte-Interna.
 
-- **Fossibot F2400** ✅ **Vollständig getestet und funktional**
-- **Fossibot F3600 Pro** ⚠️ **Nicht getestet** - sollte theoretisch funktionieren
+## 🔋 Status & Kompatibilität
 
-## 📋 Features
+- **Fossibot F2400**: Funktioniert bei mir (ein Gerät getestet)
+- **Fossibot F3600 Pro**: Ungetestet, könnte funktionieren
 
-⚠️ **Wichtiger Hinweis**: Die Nutzung dieses Moduls kann dazu führen, dass du aus der Fossibot Mobile App ausgeloggt wirst, da nur eine aktive Session pro Account erlaubt ist.
+**Was das bedeutet:**
+- Das Modul **scheint zu funktionieren**, ist aber nicht offiziell unterstützt
+- Basiert auf **inoffizieller API-Nutzung** (Sydpower Cloud)
+- **Deine Fossibot-App wird ausgeloggt** wenn das Modul läuft (nur eine Session pro Account)
+- **Keine Garantie** dass es bei dir funktioniert
 
-### Monitoring
-- **Echtzeit-Daten** alle 2 Minuten automatisch aktualisiert
-- **Batteriezustand** (SOC) in Prozent
-- **Gesamt-Eingang** (AC/Solar → F2400 System)
-- **Gesamt-Ausgang** (F2400 → AC/DC/USB)
-- **Output-Status** (AC/DC/USB Ausgänge An/Aus)
-- **Ladelimits** (Obere/Untere Grenzwerte)
-- **Ladestrom-Einstellungen**
-- **Verbindungsstatus** und letzte Aktualisierung
+## 📋 Was funktioniert (bei mir)
 
-### Konfiguration  
-- **Zentrale Anmeldedaten** - Nur einmal in der Discovery-Instanz eingeben
-- **Automatische Geräteerkennung** - "Geräte suchen" Button
-- **Einfache Gerätekonfiguration** - Nur Geräte-ID erforderlich
-- **Flexible Update-Intervalle** - Von 60 Sekunden bis 1 Stunde
+### Monitoring ✅
+- Batteriezustand (SOC) anzeigen
+- Stromfluss Ein-/Ausgang anzeigen
+- Output-Status (AC/DC/USB) anzeigen
+- Automatische Updates alle 2 Minuten
 
-### Steuerung
-- **AC/DC/USB Ausgänge** - Ein-/Ausschalten über Buttons oder Skripte
-- **Ladestrom-Steuerung** - 1A bis 5A in 1A-Schritten (optimiert für F2400)
-- **Ladelimit-Steuerung** - 60-100% in 5%-Schritten (9 Buttons)
-- **Entladelimit-Steuerung** - 0-50% in 5%-Schritten (11 Buttons)
-- **Erweiterte Funktionen** - Einstellungen anfordern und Status aktualisieren
+### Steuerung ✅
+- AC/DC/USB Ausgänge ein-/ausschalten
+- Ladestrom einstellen (1-5A für F2400)
+- Ladelimit einstellen (60-100%)
+- Entladelimit einstellen (0-50%)
 
-### Integration
-- **Vollständige IP-Symcon Integration** - Native Variablen und Profile
-- **Smart Home Automatisierung** - Basierend auf Batterielevel, Verbrauch etc.
-- **Webfront-kompatibel** - Übersichtliche Anzeige aller Werte
-- **Event-driven** - Trigger für Automatisierungen verfügbar
-- **Skript-Integration** - Alle Funktionen direkt in PHP-Skripten nutzbar
+### Update-Verzögerungen (wichtig!)
+
+**Realistische Erwartungen setzen:** Nach einem Klick im WebFront dauert es **10-15 Sekunden** dauern, bis sich die Anzeige aktualisiert. Ich habe noch keinen Weg gefunden, das weiter zu beschleunigen.
+
+**Warum so langsam?**
+- Gerät braucht Zeit zum Verarbeiten der Befehle
+- MQTT-Updates kommen verzögert vom Cloud-Service
+- Timer-System (s. unten) wartet bewusst einige Sekunden vor Status-Abfrage
+
+**Geduld ist gefragt** - das Modul funktioniert, braucht aber Zeit. Für mich ist das akzeptabel, das ist ja kein Gerät in dem man wild herumklickt. 
+
+### Was NICHT getestet ist ⚠️
+- **Skript-Integration**: Die PHP-Funktionen existieren, aber ich habe sie nicht ausgiebig getestet
+- **Event-System**: Automatisierungen basierend auf Werten sind theoretisch möglich
+- **Mehrere Geräte**: Nur ein F2400 getestet
+- **Langzeitstabilität**: Läuft erst seit August 2025 bei mir
 
 ## 🚀 Installation
 
-### 1. Modulbibliothek hinzufügen
+### 1. Modul installieren
 
-1. **IP-Symcon Verwaltungskonsole** öffnen
-2. **Bibliothek hinzufügen** → `https://github.com/tkaufmann/fossibot-ipsymcon`
-3. **Oder per Git**: `git clone https://github.com/tkaufmann/fossibot-ipsymcon /var/lib/symcon/modules/Fossibot`
-4. **Oder manuell**: Module nach `/var/lib/symcon/modules/Fossibot/` kopieren
+```bash
+# In IP-Symcon Verwaltungskonsole
+git clone https://github.com/tkaufmann/fossibot-ipsymcon /var/lib/symcon/modules/Fossibot
+```
 
 ### 2. Discovery-Instanz erstellen
 
-1. **Instanz hinzufügen** → **Konfigurator** (Fossibot Discovery)
-2. **E-Mail und Passwort** deines Fossibot-Accounts eingeben
-3. **"Geräte suchen"** klicken
-4. Notiere dir die **Geräte-ID** aus dem Log
+1. **Instanz hinzufügen** → **Fossibot Discovery**
+2. **Fossibot-Account Daten** eingeben (E-Mail + Passwort)
+3. **"Geräte suchen"** → Geräte-ID aus Log notieren
 
 ### 3. Device-Instanz erstellen
 
-1. **Instanz hinzufügen** → **Fossibot F2400** (oder F3600/Generic)
-2. **Geräte-ID** eingeben (z.B. `7C2C67AB5F0E`)
-3. **Update-Intervall** nach Bedarf anpassen (Standard: 120 Sekunden)
-4. **Speichern** - Zugangsdaten werden automatisch übernommen
+1. **Instanz hinzufügen** → **Fossibot F2400**
+2. **Geräte-ID** eingeben
+3. **Speichern**
 
-## 📊 Variablen-Übersicht
+## 🔧 Grundlegende Nutzung
+
+### WebFront
+- **Buttons**: AC/DC/USB Ein/Aus, Ladestrom 1-5A, Limits einstellen
+- **Anzeigen**: SOC, Ein-/Ausgang in Watt, Verbindungsstatus
+- **"Jetzt aktualisieren"**: Manueller Refresh
+
+### Verhalten verstehen
+
+Die Messwerte **"Gesamt-Eingang"** und **"Gesamt-Ausgang"** zeigen meiner Interpretation nach den kompletten Stromfluss durch das F2400-System an, nicht nur die batteriebezogenen Ströme. 
+
+Bei Erreichen des Ladelimits beziehungsweise vollem Akku (100% SOC) schaltet das Gerät in den AC-Bypass-Modus - AC-Lasten laufen dann direkt vom Netz durch das F2400 zum Verbraucher, ohne die Batterie zu belasten. Diese Bypass-Ströme werden aber trotzdem in den MQTT-Messwerten erfasst, was anfangs verwirrend sein kann.
+
+
+## 📊 Verfügbare Daten in IPSymcon
 
 | Variable | Typ | Beschreibung | Einheit |
 |----------|-----|--------------|---------|
@@ -80,47 +97,37 @@ Ein IP-Symcon Modul zur Überwachung und Steuerung von Fossibot Powerstations ü
 | Letzte Aktualisierung | Integer | Timestamp | Unix-Zeit |
 | Verbindungsstatus | String | Verbindungsinfo | Text |
 
-## 🔧 Konfiguration
+## 🔧 Ladeleistung
 
-### Update-Intervall
-- **Standard**: 120 Sekunden (2 Minuten) - Empfohlener Wert
-- **Minimum**: 60 Sekunden (nur für Tests)
-- **Empfohlen**: 120-300 Sekunden (Normalbetrieb)
-- **Maximum**: 3600 Sekunden (1 Stunde)
+Ich habe mir das Verhalten der F2400 beim Laden aus Handbuch und Beobachtungen zusammengereimt.
 
-⚠️ **Wichtiger Hinweis**: Häufige API-Aufrufe können dazu führen, dass du aus der Fossibot Mobile App ausgeloggt wirst, da nur eine aktive Session pro Account erlaubt ist.
+### Berechnung der Ladeleistung
 
-### Ladestrom-Konfiguration (F2400)
+Die Ladeleistung lässt sich näherungsweise so berechnen:
 
-**Warum nur 1-5A statt 1-20A?**
-- Das **F2400 kann maximal 1100W AC** aufnehmen
-- **5A × 230V = 1150W** entspricht bereits dem Maximum
-- Werte über 5A bringen **keine höhere Ladeleistung**
-- Die Skala wurde **optimiert für echte F2400-Nutzung**
+Watt = Volt × Ampere × Leistungsfaktor
 
-**Praktische Werte:**
-- **1A** = 230W (Schonladung, schwache Sicherungen)
-- **2A** = 460W (Langsame Ladung)
-- **3A** = 690W (Normale Ladung)
-- **4A** = 920W (Schnelle Ladung)
-- **5A** = 1150W (Maximum für F2400)
+Der Leistungsfaktor spiegelt dabei Ladeverluste wieder. Liegen diese bei 2 %, dann beträgt er 0,98. 
 
-### Drehregler am F2400
+### Maximaler Ladestrom AC
 
-**Empfohlene Einstellung:**
-- **Drehregler auf Maximum** (1100W) stellen
-- **Steuerung komplett über IP-Symcon** (1-5A)
-- **Vorteil**: Fernsteuerung und Automatisierung möglich
+Der F2400 bietet dafür zwei Einstellungen: 
 
-**Kombinierte AC + Solar Ladung:**
-- **AC**: bis 1100W (gesteuert über IP-Symcon 1-5A)
-- **Solar**: bis 500W (automatisch, je nach Verfügbarkeit)
-- **Gesamt**: bis **1600W kombiniert** bei Sonnenschein
-- **Ladezeit**: ca. 1,5h von 0% auf 80% bei vollem AC+Solar
+- einen Drehregler am Gerät, der von 300 Watt bis 1.100 Watt reicht
+- eine Einstellung in der App (beziehungsweise Webfront), die von 1 A (entspricht etwa 230 Watt) bis 15 A (3.450 Watt) reicht
 
-### MQTT-Messwerte-Verhalten (F2400)
+Technisch ist der F2400 auf maximal 1.100 Watt limitiert. Deshalb sind Einstellungen oberhalb 5 A (entspricht 1.150 Watt) wahrscheinlich sinnlos. **Entsprechend habe ich die Skala im WebFront begrenzt.**
 
-**Wichtige Erkenntnis nach API-Analyse:**
+Der jeweils niedrigere der beiden Werte gilt. Steht der Drehregler auf 500 Watt, dann sind Einstellungen in der App/WebFront oberhalb von 2 A (460 Watt) wirkungslos. Naja, zumindest von den +40 Watt bei 3A abgesehen, aber es wird wohl verständlich. Bei meinem "AC only"-Setup habe ich den Drehregler fix auf 1.100 Watt stehen und steuere nur über WebFront. 
+
+Ich gehe davon aus, dass die Einstellungen auch für das Aufladen im Auto gelten, aber unerheblich sind. Der F2400 lädt im Auto mit 12 V bei 10 A, was mageren 120 Watt entspricht und unter allen Limits liegt, die per Einstellungen vorgegeben werden können. 
+
+### Maximaler Ladestrom DC
+
+DC liefert maximal 500 Watt, abhängig von der Leistung der Solarpanels. Hierfür scheint es keine Einstellungen zu geben. 
+
+### Anzeige Total Input/Output
+
 - **totalInput/totalOutput** messen das **komplette F2400-System**
 - **NICHT nur** Batterie-spezifische Ströme
 - **AC-Bypass wird mit gemessen** und in MQTT-Werten angezeigt
@@ -138,121 +145,280 @@ AC-Ausgang: On        (Bypass-Modus bei vollem Akku)
 - **Gesamt-Ausgang** zeigt weiterhin die AC-Last (jetzt aus Batterie)
 - **Gesamt-Eingang** wird 0W (kein Netz-Input mehr)
 
-## 🔌 Stromfluss-Diagramme (F2400)
 
-### Normal-Betrieb mit AC-Anschluss (UPS-Bypass bei 100% SOC)
+## 🎮 Skript-Integration (⚠️ Nicht  getestet)
 
-**Beispiel-Szenario:** 3D-Drucker am AC-Ausgang (108W), Batterie voll (100% SOC)
+Die PHP-Funktionen existieren und sollten funktionieren, aber ich habe sie nicht umfassend getestet:
 
-```mermaid
-flowchart LR
-    AC[⚡ Netz 230V] -->|108W gesamt| F2400[🏠 F2400 Powerstation]
-    
-    F2400 -->|108W AC-Bypass| ACOut[🔌 AC-Ausgang 3D-Drucker 108W]
-    F2400 -.->|0W| Battery[🔋 Batterie 2048Wh bei 100% SOC]
-    
-    Battery -.->|0W aus| DCOut[🔌 DC-Ausgang]
-    Battery -.->|0W aus| USBOut[🔌 USB-Ausgang]
-    
-    %% MQTT Messwerte (Gesamt-System)
-    F2400 -.->|totalInput=108W| MQTT1[📊 Gesamt-Eingang]
-    F2400 -.->|totalOutput=108W| MQTT2[📊 Gesamt-Ausgang]
-    
-    %% Styling
-    classDef power fill:#e1f5fe
-    classDef device fill:#f3e5f5
-    classDef mqtt fill:#e8f5e8
-    classDef off fill:#ffebee,stroke-dasharray: 5 5
-    classDef bypass fill:#fff9c4
-    
-    class AC power
-    class F2400,ACOut,Battery device
-    class DCOut,USBOut off
-    class MQTT1,MQTT2 mqtt
+### Verfügbare Befehle
+
+```php
+// Instanz-ID deiner FossibotDevice-Instanz
+$fossibotID = 12345; // Ersetze mit deiner echten ID
+
+// === AUSGÄNGE STEUERN ===
+FBT_SetACOutput($fossibotID, true);   // AC-Ausgang einschalten
+FBT_SetACOutput($fossibotID, false);  // AC-Ausgang ausschalten
+
+FBT_SetDCOutput($fossibotID, true);   // DC-Ausgang einschalten  
+FBT_SetDCOutput($fossibotID, false);  // DC-Ausgang ausschalten
+
+FBT_SetUSBOutput($fossibotID, true);  // USB-Ausgang einschalten
+FBT_SetUSBOutput($fossibotID, false); // USB-Ausgang ausschalten
+
+// === LADEPARAMETER (F2400: 1-5A) ===
+FBT_SetMaxChargingCurrent($fossibotID, 3);   // Ladestrom: 3A (690W - normal)
+FBT_SetMaxChargingCurrent($fossibotID, 5);   // Ladestrom: 5A (1150W - maximum für F2400)
+
+FBT_SetChargingLimit($fossibotID, 80);   // Ladelimit: 80% (60-100%)
+FBT_SetDischargeLimit($fossibotID, 20);  // Entladelimit: 20% (0-50%)
+
+// === STATUS & UPDATES ===
+FBT_UpdateDeviceStatus($fossibotID);     // Status manuell aktualisieren
+FBT_RequestSettings($fossibotID);        // Einstellungen anfordern
 ```
 
-**Wichtige Erkenntnisse:**
-- 🔄 **AC-Bypass bei 100% SOC**: AC-Last läuft direkt vom Netz durch das F2400
-- 🔋 **Batterie inaktiv**: Bei vollem Akku fließt kein Strom zur/aus der Batterie
-- 📊 **Gesamt-Eingang**: 108W = Alles was ins F2400-System fließt (totalInput)
-- 📊 **Gesamt-Ausgang**: 108W = Alles was aus F2400-System raus geht (totalOutput)
-- ✅ **MQTT misst Gesamt-System**: Nicht nur Batterie, sondern kompletten Durchfluss
+### Theoretische Beispiele (ungetestet)
 
-### Solar-Betrieb ohne Netz
+⚠️ **Diese Beispiele sind theoretisch und nicht validiert:**
 
-```mermaid
-flowchart LR
-    Solar[☀️ Solar 400W] -->|400W| F2400[🏠 F2400 Powerstation]
-    
-    F2400 -->|380W| Battery[🔋 Batterie 2048Wh]
-    F2400 -->|180W via Inverter| ACOut[🔌 AC-Ausgang 180W]
-    F2400 -->|50W| DCOut[🔌 DC-Ausgang 50W]
-    F2400 -->|20W| USBOut[🔌 USB-Ausgang 20W]
-    
-    %% MQTT Messwerte (Gesamt-System)
-    F2400 -.->|totalInput=380W| MQTT1[📊 Gesamt-Eingang]
-    F2400 -.->|totalOutput=250W| MQTT2[📊 Gesamt-Ausgang]
-    
-    %% Styling
-    classDef power fill:#fff3e0
-    classDef device fill:#f3e5f5
-    classDef mqtt fill:#e8f5e8
-    
-    class Solar power
-    class F2400,ACOut,DCOut,USBOut,Battery device
-    class MQTT1,MQTT2 mqtt
+```php
+// Zeitgesteuertes Laden
+FBT_SetMaxChargingCurrent($fossibotID, 1);  // Nachts: Eco-Modus
+FBT_SetMaxChargingCurrent($fossibotID, 3);  // Tags: Normal-Modus
+
+// Batterie-Level basierte Steuerung
+$soc = GetValue(IPS_GetObjectIDByIdent('BatterySOC', $fossibotID));
+if ($soc < 20) {
+    FBT_SetMaxChargingCurrent($fossibotID, 5);  // Notladung
+}
 ```
 
-**Wichtige Erkenntnisse:**
-- 🏠 **F2400 ohne Netz**: Alle Ausgänge laufen aus der Batterie (kein Bypass möglich)
-- ⚙️ **MPPT-Verluste**: 400W Solar → 380W nutzbar (5% Verlust)
-- 📊 **Gesamt-Eingang**: 380W Solar-Input ins F2400-System (totalInput)
-- 📊 **Gesamt-Ausgang**: 250W = AC+DC+USB kombiniert aus F2400 (totalOutput)
-- 🔋 **Netto-Ladung**: +130W (380W rein, 250W raus)
+## 🐛 Bekannte Probleme
 
-### Stromausfall-Umschaltung (<8ms)
+### App-Logout Problem
+- **Problem**: Fossibot Mobile App wird ausgeloggt wenn IP-Symcon Updates abruft
+- **Ursache**: Nur eine aktive Session pro Account erlaubt
+- **Lösung**: Mobile App weniger nutzen während IP-Symcon aktiv ist
+
+### Experimentelle Natur
+- **Nicht alle Edge-Cases getestet**
+- **Basiert auf Reverse Engineering**
+- **Keine offizieller Support von Fossibot**
+- **API könnte sich jederzeit ändern**
+
+### Update-Verzögerungen
+- Nach Befehlen dauert es **10-15 Sekunden** bis Frontend aktualisiert wird
+- Das ist normal - ich habe noch keinen Weg gefunden, das zu beschleunigen
+
+## 🧪 Für Entwickler
+
+### Wie es funktioniert (technisch)
+
+```mermaid
+flowchart TD
+    subgraph Frontend["🖥️ IP-Symcon Frontend"]
+        WF[WebFront UI]
+        Scripts[PHP Scripts]
+        Automation[Automation Rules]
+    end
+    
+    subgraph DeviceModule["📱 Fossibot Device Module"]
+        DM[Device Module module.php]
+        Timer[Update Timer 120s default]
+        Variables[IP-Symcon Variables]
+        
+        subgraph UpdateSystem["⚡ Update System"]
+            TimerLogic[Timer-basierte Updates<br/>3-5s nach Commands]
+            AutoRefresh[Auto-Refresh System<br/>für Output Commands]
+        end
+    end
+    
+    subgraph ConnectionLayer["🔗 Connection Layer"]
+        Pool[ConnectionPool<br/>MQTT Reuse]
+        Semaphore[FossibotSemaphore<br/>Thread Safety]
+        Validator[ResponseValidator<br/>Command Validation]
+    end
+    
+    subgraph CommunicationLayer["📡 Communication Layer"]
+        SydClient[SydpowerClient<br/>API + Auth]
+        MqttClient[MqttWebSocketClient<br/>Real-time Control]
+        TokenCache[TokenCache<br/>24h JWT Tokens]
+    end
+    
+    subgraph FossibotCloud["🌐 Fossibot Cloud"]
+        API[Sydpower REST API<br/>auth.sydpower.com]
+        MQTT[MQTT Broker<br/>WebSocket Connection]
+        Device[F2400 Powerstation<br/>Real Device]
+    end
+    
+    %% Vertical flow connections
+    Frontend --> DeviceModule
+    DeviceModule --> ConnectionLayer
+    ConnectionLayer --> CommunicationLayer
+    CommunicationLayer --> FossibotCloud
+    
+    %% Internal connections within layers
+    WF --> DM
+    Scripts --> DM
+    Automation --> DM
+    
+    DM --> Timer
+    DM --> Variables
+    DM --> UpdateSystem
+    
+    DM --> Pool
+    DM --> Semaphore
+    DM --> Validator
+    
+    Pool --> SydClient
+    Pool --> MqttClient
+    SydClient --> TokenCache
+    
+    SydClient --> API
+    MqttClient --> MQTT
+    MQTT --> Device
+    
+    %% Styling
+    classDef frontend fill:#e1f5fe
+    classDef device fill:#f3e5f5
+    classDef connection fill:#e8f5e8
+    classDef communication fill:#fff3e0
+    classDef external fill:#ffebee
+    classDef smart fill:#f1f8e9
+    
+    class Frontend,WF,Scripts,Automation frontend
+    class DeviceModule,DM,Timer,Variables device
+    class UpdateSystem,TimerLogic,AutoRefresh smart
+    class ConnectionLayer,Pool,Semaphore,Validator connection
+    class CommunicationLayer,SydClient,MqttClient,TokenCache communication
+    class FossibotCloud,API,MQTT,Device external
+```
+
+### Update-System für Anzeige im WebFront
+
+Das Update-System nutzt zwei verschiedene Strategien je nach Command-Typ - das ist das Ergebnis vieler Trial-and-Error Versuche:
+
+- **Timer-basiert** (Limits, Ladestrom): Befehl senden → Zeit bis zum nächsten Timer-basierten Update einmalig auf 3-5s verkürzen → reguläres Timer-Update aktualisiert Status
+- **Sofort-Validierung** (Outputs): Befehl senden → Response validieren → Frontend sofort updaten
+
+**Warum verschiedene Strategien?** Nach meinen Experimenten verhalten sich Output-Befehle (AC/DC/USB ein/aus) anders als Wert-Einstellungen (Ladestrom, Limits). Output-Befehle liefern sofort eine Bestätigung mit dem neuen Status zurück, während Wert-Einstellungen nur ein "Command empfangen" senden, aber die neuen Werte erst später über separate Status-Updates verfügbar werden.
 
 ```mermaid
 sequenceDiagram
-    participant Netz as ⚡ Netz
-    participant Bypass as 🔄 AC-Bypass
-    participant Battery as 🔋 Batterie
-    participant Inverter as 🔄 Inverter
-    participant Load as 🔌 AC-Last
-    participant MQTT as 📊 MQTT-Werte
+    participant UI as 🖥️ WebFront
+    participant DM as 📱 Device Module
+    participant Timer as ⏰ Timer System
+    participant Pool as 🔗 Connection Pool
+    participant Device as 🔋 F2400 Device
     
-    Note over Netz,MQTT: Normal-Betrieb (UPS-Bypass)
-    Netz->>Bypass: 15W direkter Durchfluss
-    Bypass->>Load: 15W (3D-Drucker)
-    Netz->>Battery: 300W Ladestrom
-    MQTT->>MQTT: Batterie-Eingang=300W<br/>Batterie-Ausgang=0W
+    Note over UI,Device: Value Setting (Ladestrom, Limits)
     
-    Note over Netz,MQTT: ⚡ STROMAUSFALL ⚡
-    Netz--xBypass: ❌ Kein Strom
-    Note over Bypass,Inverter: Umschaltung <8ms
-    Battery->>Inverter: 15W für AC-Last
-    Inverter->>Load: 15W (3D-Drucker)
-    MQTT->>MQTT: Batterie-Eingang=0W<br/>Batterie-Ausgang=15W
+    UI->>DM: Set Max Charging Current (3A)
+    DM->>DM: Set Status "Ändere Ladestrom..."
+    DM->>Pool: SendCommand(REGMaxChargeCurrent, 3)
+    Pool->>Device: MQTT Command
+    Device-->>Pool: Command ACK (piep)
+    Pool-->>DM: Command sent ✅
     
-    Note over Netz,MQTT: 🔌 STROM ZURÜCK 🔌
-    Netz->>Bypass: 15W direkter Durchfluss
-    Note over Bypass,Inverter: Rückschaltung <8ms
-    Bypass->>Load: 15W (3D-Drucker)
-    Battery--xInverter: ❌ Kein Bedarf
-    MQTT->>MQTT: Batterie-Eingang=300W<br/>Batterie-Ausgang=0W
+    DM->>Timer: SetInterval(3000ms) ⏰
+    Note over DM,Timer: Timer verkürzt für schnelleres Update
+    
+    Timer->>DM: Timer triggers after 3s
+    DM->>Pool: RequestSettings
+    Pool->>Device: Get current status
+    Device-->>Pool: Current values (3A confirmed)
+    Pool-->>DM: Status data
+    DM->>UI: Update Frontend (3A) ✅
+    
+    Note over UI,Device: Output Command (AC/DC/USB)
+    
+    UI->>DM: Set AC Output ON
+    DM->>DM: Set Status "Schalte AC ein..."
+    DM->>Pool: SendCommand(REGEnableACOutput)
+    Pool->>Device: MQTT Command
+    Device-->>Pool: Status Update (AC=ON)
+    Pool->>DM: Validate Response ✅
+    DM->>UI: Immediate Update (AC=ON) ✅
 ```
 
-### MQTT-Register-Mapping
+### Connection Pool Architecture
 
-Korrigierte Interpretation nach API-Analyse:
+Das Connection-Pool-System reduziert API-Aufrufe und verbessert die Performance:
+
+```mermaid
+graph TB
+    subgraph "🏊 Connection Pool Layer"
+        subgraph "Pool Management"
+            Pool[FossibotConnectionPool<br/>Singleton Pattern]
+            PoolCache[Active Connections<br/>Key: Instance ID]
+            TokenMgmt[Token Management<br/>24h JWT Caching]
+        end
+        
+        subgraph "Thread Safety"
+            Semaphore[FossibotSemaphore<br/>Prevents Race Conditions]
+            Mutex[Command Serialization<br/>One MQTT at a time]
+        end
+    end
+    
+    subgraph "📱 Multiple Device Instances"
+        Dev1[Device Instance 1<br/>F2400-Kitchen]
+        Dev2[Device Instance 2<br/>F2400-Garage] 
+        Dev3[Device Instance N<br/>F2400-Workshop]
+    end
+    
+    subgraph "🔄 Shared Resources"
+        subgraph "MQTT Connections"
+            MQTT1[MQTT Client 1<br/>mqtt1.sydpower.com]
+            MQTT2[MQTT Client 2<br/>mqtt2.sydpower.com]
+            MQTT3[MQTT Client N<br/>Different Accounts]
+        end
+        
+        subgraph "Authentication"
+            Auth[Sydpower API<br/>auth.sydpower.com]
+            JWT[JWT Token Cache<br/>.token_cache files]
+        end
+    end
+    
+    %% Connections
+    Dev1 --> Pool
+    Dev2 --> Pool  
+    Dev3 --> Pool
+    
+    Pool --> PoolCache
+    Pool --> TokenMgmt
+    Pool --> Semaphore
+    
+    PoolCache --> MQTT1
+    PoolCache --> MQTT2
+    PoolCache --> MQTT3
+    
+    TokenMgmt --> Auth
+    TokenMgmt --> JWT
+    
+    Semaphore --> Mutex
+    
+    %% Styling
+    classDef pool fill:#e1f5fe
+    classDef device fill:#f3e5f5
+    classDef shared fill:#e8f5e8
+    classDef safety fill:#fff3e0
+    
+    class Pool,PoolCache,TokenMgmt pool
+    class Semaphore,Mutex safety
+    class Dev1,Dev2,Dev3 device
+    class MQTT1,MQTT2,MQTT3,Auth,JWT shared
+```
+
+#### MQTT-Register-Mapping
 
 ```mermaid
 graph TB
     subgraph "📡 MQTT Register (Modbus)"
-        R6["Register 6<br/>totalInput<br/>(Gesamt-Eingang)"]
-        R39["Register 39<br/>totalOutput<br/>(Gesamt-Ausgang)"]
-        R56["Register 56<br/>SOC<br/>(Ladezustand)"]
-        R41["Register 41<br/>activeOutputList<br/>(AC/DC/USB Status)"]
+        R6["Register 6<br/>totalInput<br/>(Gesamt-Eingang in Watt)"]
+        R39["Register 39<br/>totalOutput<br/>(Gesamt-Ausgang in Watt)"]
+        R56["Register 56<br/>SOC<br/>(Ladezustand in Promille)"]
+        R41["Register 41<br/>activeOutputList<br/>(AC-/DC-/USB-Out Status on/off)"]
     end
     
     subgraph "⚡ Physikalische Messungen"
@@ -264,8 +430,8 @@ graph TB
     subgraph "📊 IP-Symcon Anzeige"
         IPSIn["Gesamt-Eingang<br/>(TotalInput)"]
         IPSOut["Gesamt-Ausgang<br/>(TotalOutput)"]
-        IPSSOC["Ladezustand<br/>(BatterySOC)"]
         IPSOutputs["AC/DC/USB Ausgänge<br/>(Boolean-Schalter)"]
+        IPSSOC["Ladezustand<br/>(BatterySOC)"]
     end
     
     R6 --> SystemIn --> IPSIn
@@ -296,267 +462,55 @@ Bit 10 = DC-Ausgang
 Bit 11 = AC-Ausgang
 ```
 
-### Steuerung über Buttons
-- **AC/DC/USB Ein/Aus** - Direkte Ausgänge-Steuerung mit Auto-Update
-- **Ladestrom** - 1A, 2A, 3A, 4A, 5A Buttons (angepasst für F2400)
-- **Ladelimit** - 60%, 65%, 70%, 75%, 80%, 85%, 90%, 95%, 100% Buttons
-- **Entladelimit** - 0%, 5%, 10%, 15%, 20%, 25%, 30%, 35%, 40%, 45%, 50% Buttons
-- **"Jetzt aktualisieren"** - Sofortige Datenabfrage
-- **"Geräteinformationen"** - Debug-Informationen
-- **"Einstellungen anfordern"** - Aktuelle Geräteeinstellungen abrufen
-
-### Auto-Refresh System
-**Alle Steuerbefehle lösen automatische Status-Updates aus:**
-- ✅ **Sofortiger UI-Update** nach Befehlsausführung
-- ⏱️ **2 Sekunden Wartezeit** für F2400-interne Verarbeitung
-- 🔄 **Automatische Neuabfrage** der aktuellen Gerätedaten
-- 📱 **WebFrontend-Synchronisation** ohne manuelles "Jetzt aktualisieren"
-
-**Für Scripts deaktivierbar:**
-```php
-// Mit Auto-Refresh (Standard)
-FBT_SetChargingLimit(80);
-
-// Ohne Auto-Refresh (Performance)
-FBT_SetChargingLimit(80, false);
-```
-
-## 🔐 Sicherheit
-
-- **Zugangsdaten verschlüsselt** in IP-Symcon Properties gespeichert
-- **Token-Caching** - Minimiert API-Aufrufe (24h Gültigkeit)
-- **Sichere MQTT-Verbindung** über WebSocket
-- **Automatische Token-Erneuerung** bei Ablauf
-
-## 🧪 Technische Details
-
 ### Architektur
 - **Discovery-Modul** (Typ 4): Zentrale Anmeldung und Geräteerkennung
 - **Device-Modul** (Typ 3): Individual Geräte-Monitoring
-- **Fossibot-PHP Library**: API-Client für Sydpower-Backend
-- **Token-Cache**: Optimierte Authentifizierung
+- **Connection Pool Layer**: MQTT-Verbindungen wiederverwenden
+- **Update System**: Timer + Auto-Refresh Hybrid
+- **Response Validation**: Command-Validierung
 
 ### Kommunikation
 - **HTTPS API**: Authentifizierung und Geräteabfrage
 - **MQTT over WebSocket**: Echtzeit-Statusupdates
 - **JWT Tokens**: 24-Stunden gültige Zugriffstoken
 - **Modbus Protocol**: Gerätesteuerung über MQTT
+- **Connection Pooling**: Wiederverwendung von MQTT-Clients
 
 ### Debugging
-- **Umfassendes Logging** auf verschiedenen Log-Leveln
-- **Token-Debug-Info** zur Troubleshooting
-- **Verbindungsstatus-Tracking**
-- **MQTT-Message-Debugging**
+- Logs in IP-Symcon Meldungen anschauen
+- ConnectionStatus Variable zeigt aktuellen Zustand
+- Debug-Level in den Einstellungen erhöhen
 
-## 🐛 Bekannte Probleme & Lösungen
-
-### Token-Invalidierung / App-Logout
-- **Ursache**: Fossibot Mobile App und IP-Symcon teilen sich einen Account - nur eine aktive Session möglich
-- **Symptom**: Wirst aus der Mobile App ausgeloggt, wenn IP-Symcon Updates abruft
-- **Lösung**: 
-  - **Mobile App weniger nutzen** während IP-Symcon aktiv ist
-
-## 🎮 Steuerung über Skripte
-
-Alle Funktionen können direkt in IP-Symcon PHP-Skripten verwendet werden:
-
-### Verfügbare Befehle
-
-```php
-// Instanz-ID deiner FossibotDevice-Instanz
-$fossibotID = 12345; // Ersetze mit deiner echten ID
-
-// === AUSGÄNGE STEUERN ===
-FBT_SetACOutput($fossibotID, true);   // AC-Ausgang einschalten
-FBT_SetACOutput($fossibotID, false);  // AC-Ausgang ausschalten
-
-FBT_SetDCOutput($fossibotID, true);   // DC-Ausgang einschalten  
-FBT_SetDCOutput($fossibotID, false);  // DC-Ausgang ausschalten
-
-FBT_SetUSBOutput($fossibotID, true);  // USB-Ausgang einschalten
-FBT_SetUSBOutput($fossibotID, false); // USB-Ausgang ausschalten
-
-// === LADEPARAMETER (F2400: 1-5A) ===
-FBT_SetMaxChargingCurrent($fossibotID, 1);   // Ladestrom: 1A (230W - minimal)
-FBT_SetMaxChargingCurrent($fossibotID, 2);   // Ladestrom: 2A (460W - langsam)
-FBT_SetMaxChargingCurrent($fossibotID, 3);   // Ladestrom: 3A (690W - normal)
-FBT_SetMaxChargingCurrent($fossibotID, 4);   // Ladestrom: 4A (920W - schnell)
-FBT_SetMaxChargingCurrent($fossibotID, 5);   // Ladestrom: 5A (1150W - maximum für F2400)
-
-FBT_SetChargingLimit($fossibotID, 80);   // Ladelimit: 80% (60-100%)
-FBT_SetChargingLimit($fossibotID, 90);   // Ladelimit: 90%
-FBT_SetChargingLimit($fossibotID, 100);  // Ladelimit: 100%
-
-FBT_SetDischargeLimit($fossibotID, 0);   // Entladelimit: 0% (0-50%)
-FBT_SetDischargeLimit($fossibotID, 20);  // Entladelimit: 20%
-FBT_SetDischargeLimit($fossibotID, 30);  // Entladelimit: 30%
-
-FBT_SetChargeTimer($fossibotID, 60);     // Lade-Timer: 60 Minuten
-
-// === STATUS & UPDATES ===
-FBT_UpdateDeviceStatus($fossibotID);     // Status manuell aktualisieren
-FBT_RequestSettings($fossibotID);        // Einstellungen anfordern
-FBT_SetUpdateInterval($fossibotID, 300); // Update-Intervall: 5 Minuten
-FBT_RefreshNow($fossibotID);             // Sofort aktualisieren
-FBT_GetDeviceInfo($fossibotID);          // Geräteinformationen
-```
-
-### Praktische Beispiele
-
-**Zeitgesteuertes Laden (Ablaufplan):**
-```php
-// Nachts: Eco-Modus (minimales Laden)
-FBT_SetMaxChargingCurrent($fossibotID, 1);
-FBT_SetChargingLimit($fossibotID, 80);
-
-// Tags: Normal-Modus
-FBT_SetMaxChargingCurrent($fossibotID, 10);
-FBT_SetChargingLimit($fossibotID, 100);
-```
-
-**Solar-Überschuss-Steuerung:**
-```php
-// Bei hoher PV-Leistung: Vollgas laden (F2400)
-$pvPower = GetValue($pvInstanceID);
-if ($pvPower > 1000) {
-    FBT_SetMaxChargingCurrent($fossibotID, 5);  // Maximum für F2400
-    FBT_SetChargingLimit($fossibotID, 100);
-} elseif ($pvPower > 500) {
-    FBT_SetMaxChargingCurrent($fossibotID, 3);  // Moderate Ladung
-} else {
-    FBT_SetMaxChargingCurrent($fossibotID, 1);  // Eco-Modus
-}
-```
-
-**Batterie-Level Management:**
-```php
-// Aktuellen SOC prüfen
-$soc = GetValue(IPS_GetObjectIDByIdent('BatterySOC', $fossibotID));
-
-if ($soc < 20) {
-    // Notladung aktivieren (F2400)
-    FBT_SetMaxChargingCurrent($fossibotID, 5);  // Maximum für F2400
-    FBT_SetChargingLimit($fossibotID, 100);
-} elseif ($soc > 95) {
-    // Erhaltungsladung
-    FBT_SetMaxChargingCurrent($fossibotID, 1);
-}
-```
-
-**Strompreis-Optimierung:**
-```php
-// Bei niedrigen Strompreisen (z.B. nachts) - F2400
-if ($strompreis < 0.20) {
-    FBT_SetMaxChargingCurrent($fossibotID, 5);  // Maximum für F2400
-} else {
-    FBT_SetMaxChargingCurrent($fossibotID, 1);  // Eco-Modus
-}
-```
-
-**Geräte basierend auf Batterielevel steuern:**
-```php
-$soc = GetValue(IPS_GetObjectIDByIdent('BatterySOC', $fossibotID));
-
-if ($soc < 30) {
-    // Stromsparmodus: Nur AC für wichtige Geräte
-    FBT_SetUSBOutput($fossibotID, false);
-    FBT_SetDCOutput($fossibotID, false);
-} else {
-    // Normalmodus: Alle Ausgänge an
-    FBT_SetUSBOutput($fossibotID, true);
-    FBT_SetDCOutput($fossibotID, true);
-}
-```
-
-### Instanz-ID ermitteln
-
-```php
-// Per Objektbaum: Rechtsklick auf FossibotDevice → Eigenschaften → ID
-
-// Oder automatisch suchen:
-$instances = IPS_GetInstanceListByModuleID('{DEINE-FOSSIBOT-MODUL-GUID}');
-$fossibotID = $instances[0]; // Erste gefundene Instanz
-```
-
-## 🔄 Changelog
-
-### v1.7 - Aktuell
-- ✅ **Präzise Batterie-Labels** - "Batterie-Eingang/Ausgang" statt "Gesamt"
-- ✅ **UPS-Bypass-Verhalten dokumentiert** - AC-Lasten erscheinen nicht in Messwerten
-- ✅ **Technisch korrekte Interpretation** - Werte zeigen echten Batterie-Durchsatz
-
-### v1.6
-- ✅ **F2400-optimierte Ladestrom-Skala** - 1-5A statt 1-20A (da F2400 max 1100W AC)
-- ✅ **Vollständige Webfront-Steuerung** - Slider für Limits, Dropdown für Ladestrom
-- ✅ **Kombinierte AC+Solar Dokumentation** - bis 1600W Gesamtladeleistung
-- ✅ **Drehregler-Empfehlungen** - Optimale Konfiguration für IP-Symcon Steuerung
-- ✅ **Stille MQTT-Kommunikation** - Keine störenden Debug-Meldungen mehr
-
-### v1.5
-- ✅ **Entladelimit 0% freigegeben** - Vollständige Kontrolle 0-50%
-- ✅ **11 Entladelimit-Buttons** - 0%, 5%, 10%, 15%, 20%, 25%, 30%, 35%, 40%, 45%, 50%
-- ✅ **Erweiterte Entlade-Kontrolle** - Komplette Bandbreite verfügbar
-
-### v1.4
-- ✅ **App-konforme Limits** - Ladelimit 60-100%, Entladelimit 5-50%
-- ✅ **Erweiterte Button-Arrays** - 9 Ladelimit + 10 Entladelimit Buttons
-- ✅ **Validierung angepasst** - Sichere Bereiche wie in Fossibot App
-- ✅ **Vollständige Batterie-Kontrolle** - Lade- und Entladeparameter
-
-### v1.3
-- ✅ **Entladelimit-Steuerung** - Neue FBT_SetDischargeLimit() Funktion  
-- ✅ **REGDischargeLowerLimit** - Modbus-Befehl implementiert
-- ✅ **Erweiterte Ladelimits** - 50-100% in 5%-Schritten
-
-### v1.2
-- ✅ **Vollständige Steuerung** - AC/DC/USB Ausgänge schaltbar
-- ✅ **Ladeparameter-Steuerung** - Ladestrom (1-20A) und Ladelimit (80-100%)
-- ✅ **Skript-Integration** - Alle Funktionen in PHP-Skripten nutzbar
-- ✅ **Optimiertes Button-Layout** - Übersichtliche Reihen-Anordnung
-- ✅ **Reduziertes Logging** - Weniger Spam, nur relevante Meldungen
-
-### v1.1
-- ✅ **Korrekte Output-Bit-Zuordnung** für F2400
-- ✅ **Automatische Timer-Updates** funktional
-- ✅ **Verbesserte Token-Wiederverwendung**
-- ✅ **Zentrale Zugangsdaten-Verwaltung**
-- ✅ **Umfassendes Debug-System**
-
-### v1.0 - Initial Release  
-- ⚠️ Falsche AC/DC/USB Bit-Assignments
-- ⚠️ Timer-Updates nicht funktional
-
-## 🤝 Contributing
-
-### Neue Geräte testen
-Falls du einen **F3600 Pro** oder andere Fossibot-Geräte hast:
-
-1. **Teste das Modul** und dokumentiere die Ergebnisse
-2. **Bit-Pattern analysieren** falls Output-Status falsch
-3. **Issues erstellen** auf GitHub mit Debug-Logs
-4. **Pull Requests** für Verbesserungen willkommen
-
-### Bug Reports
-- **Debug-Logs** aus IP-Symcon Meldungen anhängen
-- **Gerätemodell** und Firmware-Version angeben
-- **Schritte zur Reproduktion** beschreiben
-
-## 📞 Support
+## Support
 
 - **GitHub Issues**: https://github.com/tkaufmann/fossibot-ipsymcon/issues
 - **IP-Symcon Community**: https://community.symcon.de
-- **Fossibot-PHP Library**: https://github.com/tkaufmann/fossibot-php
 
-## 📜 License
+**Bei Bug Reports bitte angeben:**
+- Gerätemodell und Firmware-Version
+- IP-Symcon Version  
+- Debug-Logs aus den Meldungen
+- Schritte zur Reproduktion
 
-MIT License - Siehe LICENSE Datei für Details.
+## Contributing
 
-## 🙏 Credits
+**Neue Geräte testen:**
+- Teste das Modul mit deinem Gerät
+- Dokumentiere was funktioniert/nicht funktioniert
+- Erstelle Issues mit Debug-Logs
 
-- **Fossibot-PHP Library**: Basis-API-Client für Sydpower
-- **IP-Symcon Community**: Unterstützung und Testing
-- **Reverse Engineering**: Sydpower API Protokoll-Analyse
+**Code-Verbesserungen:**
+- Pull Requests willkommen
+- Bitte erst Issues für größere Änderungen erstellen
+
+## License
+
+MIT License
+
+## Credits
+
+- **Fossibot-Code von iamslan**: [Reverse Engineering](https://github.com/iamslan/fossibot-reverse-engineering) und [HA-Integration](https://github.com/iamslan/fossibot)
 
 ---
 
-⚡ **Powered by Fossibot F2400** - Getestet mit echten Geräten für maximale Zuverlässigkeit!
+⚠️ **Disclaimer**: Experimentelles Projekt ohne Garantien. Nutze es auf eigenes Risiko.

@@ -41,21 +41,6 @@ class FossibotResponseValidator {
                 'validateType' => 'usbOff',
                 'timeout' => 2000
             ),
-            'REGChargeUpperLimit' => array(
-                'fields' => array('acChargingUpperLimit', 'maximumChargingCurrent'),
-                'validateType' => 'chargeLimit',
-                'timeout' => 2500
-            ),
-            'REGDischargeLowerLimit' => array(
-                'fields' => array('dischargeLowerLimit', 'maximumChargingCurrent'),
-                'validateType' => 'dischargeLimit',
-                'timeout' => 2500
-            ),
-            'REGMaxChargeCurrent' => array(
-                'fields' => array('maximumChargingCurrent'),
-                'validateType' => 'maxCurrent',
-                'timeout' => 2000  // Reduziert auf 2s, da Timer das Update übernimmt
-            ),
             'REGRequestSettings' => array(
                 'fields' => array('soc', 'totalInput', 'totalOutput'),
                 'validateType' => 'settings',
