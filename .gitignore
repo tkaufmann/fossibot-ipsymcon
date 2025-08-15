@@ -46,3 +46,10 @@ tests/
 test-output/
 coverage/
 phpunit.xml.local
+
+# Spezifische Dateien
+deploy-fossibot.sh
+CLAUDE.md
+IP-SYMCON-WISSENSBASIS.md
+ipsymcon.md
+.claude
