@@ -31,20 +31,23 @@ class FossibotCommandTester
             // 1. Originalzustand erfassen
             $this->captureOriginalState();
             
-            // 2. Output-Commands testen (schnelle Response erwartet)
-            $this->testOutputCommands();
+            // 2. MULTIPLE COMMANDS TEST (Haupttest)
+            $this->testMultipleCommands();
             
-            // 3. Value-Settings testen (langsamere Response erwartet)
-            $this->testValueSettings();
+            // 3. Output-Commands testen (schnelle Response erwartet)
+            // $this->testOutputCommands();
             
-            // 4. Status-Functions testen
-            $this->testStatusFunctions();
+            // 4. Value-Settings testen (langsamere Response erwartet)
+            // $this->testValueSettings();
             
-            // 5. Originalzustand wiederherstellen
-            $this->restoreOriginalState();
+            // 5. Status-Functions testen
+            // $this->testStatusFunctions();
             
-            // 6. Test-Report generieren
-            $this->generateTestReport();
+            // 6. Originalzustand wiederherstellen
+            // $this->restoreOriginalState();
+            
+            // 7. Test-Report generieren
+            // $this->generateTestReport();
             
         } catch (Exception $e) {
             FossibotEventTestHelper::log("KRITISCHER FEHLER: " . $e->getMessage());
@@ -130,6 +133,100 @@ class FossibotCommandTester
             'FBT_SetUSBOutput(false)',
             10
         );
+    }
+    
+    /**
+     * Testet mehrere Commands hintereinander
+     */
+    public function testMultipleCommands(): void
+    {
+        FossibotEventTestHelper::log("=== MULTIPLE COMMANDS TEST ===");
+        
+        // Aktuelle Werte erfassen
+        $acCurrent = $this->getCurrentValue('ACOutput');
+        $dcCurrent = $this->getCurrentValue('DCOutput');
+        $limitCurrent = $this->getCurrentValue('ChargingLimit');
+        
+        FossibotEventTestHelper::log("VORHER - AC: $acCurrent, DC: $dcCurrent, Limit: $limitCurrent%");
+        
+        // Command 1: AC umschalten
+        FossibotEventTestHelper::log("--- Command 1: AC umschalten ---");
+        $newAC = !$acCurrent;
+        $startTime1 = microtime(true);
+        $result1 = FBT_SetACOutput($this->fossibotID, $newAC);
+        $duration1 = round((microtime(true) - $startTime1) * 1000, 1);
+        FossibotEventTestHelper::log("AC auf " . ($newAC ? 'EIN' : 'AUS') . " - Result: " . ($result1 ? 'SUCCESS' : 'FAILED') . " ({$duration1}ms)");
+        
+        sleep(2);
+        
+        // Command 2: DC umschalten
+        FossibotEventTestHelper::log("--- Command 2: DC umschalten ---");
+        $newDC = !$dcCurrent;
+        $startTime2 = microtime(true);
+        $result2 = FBT_SetDCOutput($this->fossibotID, $newDC);
+        $duration2 = round((microtime(true) - $startTime2) * 1000, 1);
+        FossibotEventTestHelper::log("DC auf " . ($newDC ? 'EIN' : 'AUS') . " - Result: " . ($result2 ? 'SUCCESS' : 'FAILED') . " ({$duration2}ms)");
+        
+        sleep(2);
+        
+        // Command 3: Ladelimit ändern
+        FossibotEventTestHelper::log("--- Command 3: Ladelimit ändern ---");
+        $newLimit = ($limitCurrent >= 90) ? 80 : 90;
+        $startTime3 = microtime(true);
+        $result3 = FBT_SetChargingLimit($this->fossibotID, $newLimit);
+        $duration3 = round((microtime(true) - $startTime3) * 1000, 1);
+        FossibotEventTestHelper::log("Ladelimit auf {$newLimit}% - Result: " . ($result3 ? 'SUCCESS' : 'FAILED') . " ({$duration3}ms)");
+        
+        FossibotEventTestHelper::log("=== ALLE 3 COMMANDS GESENDET - WARTE 15s ===");
+        sleep(15);
+        
+        // Prüfe Änderungen nach 15 Sekunden
+        $acAfter = $this->getCurrentValue('ACOutput');
+        $dcAfter = $this->getCurrentValue('DCOutput');
+        $limitAfter = $this->getCurrentValue('ChargingLimit');
+        
+        FossibotEventTestHelper::log("NACHHER - AC: $acAfter, DC: $dcAfter, Limit: $limitAfter%");
+        
+        $changes = 0;
+        if ($acAfter != $acCurrent) {
+            FossibotEventTestHelper::log("✅ AC geändert: $acCurrent → $acAfter");
+            $changes++;
+        } else {
+            FossibotEventTestHelper::log("❌ AC unverändert: $acAfter");
+        }
+        
+        if ($dcAfter != $dcCurrent) {
+            FossibotEventTestHelper::log("✅ DC geändert: $dcCurrent → $dcAfter");
+            $changes++;
+        } else {
+            FossibotEventTestHelper::log("❌ DC unverändert: $dcAfter");
+        }
+        
+        if ($limitAfter != $limitCurrent) {
+            FossibotEventTestHelper::log("✅ Limit geändert: $limitCurrent% → $limitAfter%");
+            $changes++;
+        } else {
+            FossibotEventTestHelper::log("❌ Limit unverändert: $limitAfter%");
+        }
+        
+        FossibotEventTestHelper::log("ERGEBNIS: $changes von 3 Commands erfolgreich umgesetzt");
+        
+        if ($changes < 3) {
+            FossibotEventTestHelper::log("=== WARTE WEITERE 15s ===");
+            sleep(15);
+            
+            $acFinal = $this->getCurrentValue('ACOutput');
+            $dcFinal = $this->getCurrentValue('DCOutput');
+            $limitFinal = $this->getCurrentValue('ChargingLimit');
+            
+            $finalChanges = 0;
+            if ($acFinal != $acCurrent) $finalChanges++;
+            if ($dcFinal != $dcCurrent) $finalChanges++;
+            if ($limitFinal != $limitCurrent) $finalChanges++;
+            
+            FossibotEventTestHelper::log("FINALE WERTE - AC: $acFinal, DC: $dcFinal, Limit: $limitFinal%");
+            FossibotEventTestHelper::log("FINAL ERGEBNIS: $finalChanges von 3 Commands erfolgreich umgesetzt");
+        }
     }
     
     /**

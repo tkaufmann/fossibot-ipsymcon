@@ -29,14 +29,10 @@ class FossibotDevice extends IPSModule
         $this->CreateDischargeLimitProfile();
         $this->CreateChargingCurrentProfile();
 
-        // THEN: Register variables with profiles
-        // === CLEANUP: Alle veralteten Variablen entfernen ===
-        $this->CleanupOldVariables();
-        
         // Force-Update für Label-Änderung
         @$this->UnregisterVariable('TotalInput');
         @$this->UnregisterVariable('TotalOutput');
-        
+
         // Hauptvariablen ohne Kategorien (erstmal funktionierend)
         $this->RegisterVariableInteger('BatterySOC', 'Ladezustand', '~Battery.100', 100);
         $this->RegisterVariableFloat('TotalInput', 'Gesamt-Eingang', '~Watt.3680', 110);
@@ -57,14 +53,14 @@ class FossibotDevice extends IPSModule
         if ($this->GetValue('MaxChargingCurrent') == 0) {
             $this->SetValue('MaxChargingCurrent', 3); // 3A = 690W (moderate Ladung)
         }
-        
+
         $this->RegisterVariableInteger('ChargingLimit', 'Ladelimit', 'FBT.ChargingLimit', 310);
         $this->EnableAction('ChargingLimit');
         // Standardwert setzen falls Variable leer
         if ($this->GetValue('ChargingLimit') == 0) {
             $this->SetValue('ChargingLimit', 80);
         }
-        
+
         $this->RegisterVariableInteger('DischargeLimit', 'Entladelimit', 'FBT.DischargeLimit', 320);
         $this->EnableAction('DischargeLimit');
         // Standardwert setzen falls Variable leer
@@ -79,7 +75,7 @@ class FossibotDevice extends IPSModule
         // Validierung
         $deviceId = $this->ReadPropertyString('DeviceID');
         $credentials = $this->GetDiscoveryCredentials();
-        
+
         if (empty($deviceId) || !$credentials) {
             $this->SetStatus(201); // Inaktiv - Konfiguration erforderlich
             $this->SetTimerInterval('UpdateTimer', 0);
@@ -89,11 +85,11 @@ class FossibotDevice extends IPSModule
         // Status auf aktiv setzen
         $this->SetStatus(102);
         $this->SetValue('ConnectionStatus', 'Konfiguriert');
-        
+
         // Timer konfigurieren
         $interval = $this->ReadPropertyInteger('UpdateInterval');
         $this->SetTimerInterval('UpdateTimer', $interval * 1000);
-        
+
         // Nur beim ersten Mal (Create) oder wenn DeviceID geändert wurde, Status aktualisieren
         // Nicht bei simplen Timer-Änderungen!
         static $lastDeviceId = null;
@@ -171,7 +167,7 @@ class FossibotDevice extends IPSModule
     }
 
     /**
-     * Gerätestatus aktualisieren
+     * Geräte-Status manuell aktualisieren - triggert Timer-Update
      */
     public function FBT_UpdateDeviceStatus(): bool
     {
@@ -185,109 +181,13 @@ class FossibotDevice extends IPSModule
         }
 
         // Status anzeigen
-        $this->SetValue('ConnectionStatus', 'Aktualisiere Status...');
+        $this->SetValue('ConnectionStatus', 'Triggere Update...');
+        $this->LogMessage('Manueller Update-Trigger ausgeführt', KL_DEBUG);
 
-        try {
-            // Load helper classes
-            require_once __DIR__ . '/../libs/FossibotConnectionPool.php';
-            require_once __DIR__ . '/../libs/FossibotSemaphore.php';
-            
-            // Acquire semaphore to prevent collisions - if already running, mission accomplished!
-            if (!FossibotSemaphore::acquire('status_update', 100)) {
-                $this->LogMessage('Status-Update bereits in Arbeit - Mission erfüllt', KL_DEBUG);
-                $this->SetValue('ConnectionStatus', 'Update läuft bereits');
-                return true; // Mission erfüllt, anderes Update läuft schon
-            }
-            
-            try {
-                // Get connection from pool (nutzt Cache!)
-                // WICHTIG: Gleicher Key wie SendDeviceCommand damit gleiche Connection!
-                $client = FossibotConnectionPool::getConnection(
-                    $credentials['email'],
-                    $credentials['password'],
-                    $this->InstanceID
-                );
-                
-                if (!$client) {
-                    throw new Exception("Verbindung fehlgeschlagen");
-                }
-                
-                // Devices sind bereits im Pool gecached
-                $devices = $client->getDevices();
-                $this->LogMessage('Debug: Geräte aus Pool, Anzahl: ' . count($devices), KL_DEBUG);
-            
-            // Geräteeinstellungen anfordern
-            $this->SetValue('ConnectionStatus', 'Lade Gerätedaten...');
-            $client->requestDeviceSettings($deviceId);
-            
-            // Kurz warten und auf Updates hören
-            $client->listenForUpdates(5);
-            
-            // Alle verfügbaren Geräte-IDs prüfen
-            $allDeviceIds = $client->getDeviceIds();
-            $this->LogMessage('Debug: Verfügbare Geräte-IDs: ' . json_encode($allDeviceIds), KL_DEBUG);
-            
-            // Aktuellen Status abrufen
-            $status = $client->getDeviceStatus($deviceId);
-            $this->LogMessage('Debug: Status für ' . $deviceId . ': ' . json_encode($status), KL_DEBUG);
-            
-            // Fallback: Falls deviceId nicht funktioniert, versuche alle verfügbaren IDs
-            if (!$status) {
-                foreach ($allDeviceIds as $availableId) {
-                    $this->LogMessage('Debug: Versuche alternative ID: ' . $availableId, KL_DEBUG);
-                    $status = $client->getDeviceStatus($availableId);
-                    if ($status) {
-                        $this->LogMessage('Debug: Erfolg mit alternativer ID: ' . $availableId, KL_DEBUG);
-                        break;
-                    }
-                }
-            }
-            
-            if ($status && !empty($status)) {
-                $this->ProcessStatusData($status);
-                $this->SetValue('ConnectionStatus', 'Online');
-                $this->SetValue('LastUpdate', time());
-                
-                // Timer wieder auf normale Intervall-Zeit zurücksetzen falls er verkürzt wurde
-                $normalInterval = $this->ReadPropertyInteger('UpdateInterval') * 1000;
-                if ($normalInterval > 0) {
-                    $this->SetTimerInterval('UpdateTimer', $normalInterval);
-                }
-                
-                // Status-Update erfolgreich
-                $this->LogMessage('Status aktualisiert', KL_DEBUG);
-                
-                // Release connection back to pool (NICHT disconnect!)
-                FossibotConnectionPool::releaseConnection($this->InstanceID);
-                FossibotSemaphore::release('status_update');
-                
-                return true;
-            } else {
-                $this->SetValue('ConnectionStatus', 'Fehler: Keine Daten empfangen');
-                $this->LogMessage('Keine Statusdaten empfangen - Alle Versuche fehlgeschlagen', KL_WARNING);
-                
-                // Debug: Zeige komplettes devices Array
-                $allData = $client->getAllDeviceData();
-                $this->LogMessage('Debug: Komplettes devices Array: ' . json_encode($allData), KL_DEBUG);
-                
-                // Release connection back to pool
-                FossibotConnectionPool::releaseConnection($this->InstanceID);
-                FossibotSemaphore::release('status_update');
-                
-                return false;
-            }
-            
-            } finally {
-                // Always release resources
-                FossibotConnectionPool::releaseConnection($this->InstanceID);
-                FossibotSemaphore::release('status_update');
-            }
-            
-        } catch (Exception $e) {
-            $this->SetValue('ConnectionStatus', 'Fehler: ' . $e->getMessage());
-            $this->LogMessage('Update-Fehler: ' . $e->getMessage(), KL_ERROR);
-            return false;
-        }
+        // Timer sofort auslösen (nutzt bewährte Timer-Logik)
+        $this->SetTimerInterval('UpdateTimer', 1); // 1ms = sofort
+
+        return true;
     }
 
     /**
@@ -298,13 +198,13 @@ class FossibotDevice extends IPSModule
         // KOMPLETTE MQTT-RESPONSE LOGGEN
         $this->LogMessage('MQTT-RESPONSE KOMPLETT: ' . json_encode($status, JSON_PARTIAL_OUTPUT_ON_ERROR), KL_NOTIFY);
         // Entfernt: Zu viel Debug-Output
-        
+
         // Der SydpowerClient speichert die Daten in diesem Format:
         // $this->devices[$deviceMac]['soc'] = round(($registers[56] / 1000) * 100, 1);
         // $this->devices[$deviceMac]['totalInput'] = $registers[6];
         // $this->devices[$deviceMac]['totalOutput'] = $registers[39];
         // etc.
-        
+
         // SOC (State of Charge) - Batterie-Ladezustand
         if (isset($status['soc'])) {
             $this->SetValue('BatterySOC', round($status['soc']));
@@ -313,7 +213,7 @@ class FossibotDevice extends IPSModule
         // Eingangs-/Ausgangsleistung
         $totalInput = 0;
         $totalOutput = 0;
-        
+
         if (isset($status['totalInput'])) {
             $totalInput = floatval($status['totalInput']);
             $this->SetValue('TotalInput', $totalInput);
@@ -322,7 +222,7 @@ class FossibotDevice extends IPSModule
             $totalOutput = floatval($status['totalOutput']);
             $this->SetValue('TotalOutput', $totalOutput);
         }
-        
+
         // Redundante Status-Variablen entfernt - Werte sind bereits in TotalInput/TotalOutput
 
         // Ausgangsstatus
@@ -347,7 +247,7 @@ class FossibotDevice extends IPSModule
             // Wenn 0, dann NICHT aktualisieren (könnte fehlende Daten bedeuten)
         }
         // Kein else-Zweig mehr - wenn nicht vorhanden, alten Wert behalten!
-        
+
         if (isset($status['dischargeLowerLimit'])) {
             // Entladelimit kann 0% sein! Immer aktualisieren wenn Wert vorhanden
             $dischargeLimit = round($status['dischargeLowerLimit'] / 10);
@@ -355,7 +255,7 @@ class FossibotDevice extends IPSModule
             $this->LogMessage("ENTLADELIMIT-UPDATE: Gerät meldet {$status['dischargeLowerLimit']} Promille = {$dischargeLimit}%", KL_DEBUG);
         }
         // Kein else-Zweig - wenn nicht vorhanden, alten Wert behalten!
-        
+
         if (isset($status['maximumChargingCurrent'])) {
             if ($status['maximumChargingCurrent'] > 0) {
                 $this->SetValue('MaxChargingCurrent', intval($status['maximumChargingCurrent']));
@@ -378,18 +278,11 @@ class FossibotDevice extends IPSModule
 
         IPS_SetProperty($this->InstanceID, 'UpdateInterval', $seconds);
         IPS_ApplyChanges($this->InstanceID);
-        
+
         $this->LogMessage('Aktualisierungsintervall geändert auf ' . $seconds . ' Sekunden', KL_NOTIFY);
         return true;
     }
 
-    /**
-     * Manuelle Aktualisierung auslösen
-     */
-    public function FBT_RefreshNow(): bool
-    {
-        return $this->FBT_UpdateDeviceStatus();
-    }
 
     /**
      * Cache löschen (z.B. wenn Discovery neue Geräte sucht)
@@ -404,11 +297,11 @@ class FossibotDevice extends IPSModule
             $devicesCacheTime = 0;
         };
         $clearCache();
-        
+
         $this->LogMessage('DEVICE-CACHE: Cache gelöscht - nächster Befehl lädt Geräteliste neu', KL_NOTIFY);
         return true;
     }
-    
+
     /**
      * Geräteinformationen abrufen
      */
@@ -421,7 +314,7 @@ class FossibotDevice extends IPSModule
             'LastUpdate' => $this->GetValue('LastUpdate'),
             'ConnectionStatus' => $this->GetValue('ConnectionStatus')
         ];
-        
+
         return json_encode($info);
     }
 
@@ -432,7 +325,7 @@ class FossibotDevice extends IPSModule
     {
         $command = $enabled ? 'REGEnableACOutput' : 'REGDisableACOutput';
         $statusText = $enabled ? 'Schalte AC-Ausgang ein' : 'Schalte AC-Ausgang aus';
-        
+
         $this->SetValue('ConnectionStatus', $statusText . '...');
         $this->LogMessage("AC Output: " . ($enabled ? 'EIN' : 'AUS'), KL_NOTIFY);
         return $this->SendDeviceCommand($command, null, $statusUpdate);
@@ -445,7 +338,7 @@ class FossibotDevice extends IPSModule
     {
         $command = $enabled ? 'REGEnableDCOutput' : 'REGDisableDCOutput';
         $statusText = $enabled ? 'Schalte DC-Ausgang ein' : 'Schalte DC-Ausgang aus';
-        
+
         $this->SetValue('ConnectionStatus', $statusText . '...');
         $this->LogMessage("DC Output: " . ($enabled ? 'EIN' : 'AUS'), KL_NOTIFY);
         return $this->SendDeviceCommand($command, null, $statusUpdate);
@@ -458,7 +351,7 @@ class FossibotDevice extends IPSModule
     {
         $command = $enabled ? 'REGEnableUSBOutput' : 'REGDisableUSBOutput';
         $statusText = $enabled ? 'Schalte USB-Ausgang ein' : 'Schalte USB-Ausgang aus';
-        
+
         $this->SetValue('ConnectionStatus', $statusText . '...');
         $this->LogMessage("USB Output: " . ($enabled ? 'EIN' : 'AUS'), KL_NOTIFY);
         return $this->SendDeviceCommand($command, null, $statusUpdate);
@@ -474,22 +367,22 @@ class FossibotDevice extends IPSModule
             $this->SetValue('ConnectionStatus', 'Fehler: Ungültiger Wert (60-100%)');
             return false;
         }
-        
+
         // Status anzeigen
         $this->SetValue('ConnectionStatus', "Ändere Ladelimit auf {$percent}%...");
         $this->LogMessage("Setze Ladelimit auf {$percent}%", KL_NOTIFY);
-        
+
         $promille = $percent * 10; // Konvertierung zu Promille
-        
+
         // Command senden OHNE auto-refresh (false)
         $result = $this->SendDeviceCommand('REGChargeUpperLimit', $promille, false);
-        
+
         if ($result) {
             // Timer temporär auf 3s verkürzen für schnelles Update
             $this->SetTimerInterval('UpdateTimer', 3000);
             $this->LogMessage("Timer auf 3s gesetzt für Ladelimit-Update", KL_DEBUG);
         }
-        
+
         return $result;
     }
 
@@ -504,14 +397,14 @@ class FossibotDevice extends IPSModule
             $this->SetValue('ConnectionStatus', 'Fehler: Ungültiger Wert (1-5A)');
             return false;
         }
-        
+
         // Status anzeigen
         $this->SetValue('ConnectionStatus', "Ändere Ladestrom auf {$ampere}A...");
         $this->LogMessage("Setze Max. Ladestrom auf {$ampere}A", KL_NOTIFY);
-        
+
         // Command senden OHNE auto-refresh (false)
         $result = $this->SendDeviceCommand('REGMaxChargeCurrent', $ampere, false);
-        
+
         if ($result) {
             // Timer temporär auf 3s verkürzen für schnelles Update
             $this->SetTimerInterval('UpdateTimer', 3000);
@@ -519,7 +412,7 @@ class FossibotDevice extends IPSModule
         } else {
             $this->SetValue('ConnectionStatus', 'Fehler: Ladestrom-Änderung fehlgeschlagen');
         }
-        
+
         return $result;
     }
 
@@ -533,7 +426,7 @@ class FossibotDevice extends IPSModule
             $this->SetValue('ConnectionStatus', 'Fehler: Ungültiger Timer-Wert');
             return false;
         }
-        
+
         $this->SetValue('ConnectionStatus', "Setze Lade-Timer auf {$minutes} Min...");
         return $this->SendDeviceCommand('REGStopChargeAfter', $minutes, $statusUpdate);
     }
@@ -548,22 +441,22 @@ class FossibotDevice extends IPSModule
             $this->SetValue('ConnectionStatus', 'Fehler: Ungültiger Wert (0-50%)');
             return false;
         }
-        
+
         // Status anzeigen
         $this->SetValue('ConnectionStatus', "Ändere Entladelimit auf {$percent}%...");
         $this->LogMessage("Setze Entladelimit auf {$percent}%", KL_NOTIFY);
-        
+
         $promille = $percent * 10; // Konvertierung zu Promille
-        
+
         // Command senden OHNE auto-refresh (false)
         $result = $this->SendDeviceCommand('REGDischargeLowerLimit', $promille, false);
-        
+
         if ($result) {
             // Timer temporär auf 5s verkürzen (Entladelimit braucht länger als andere Commands)
             $this->SetTimerInterval('UpdateTimer', 5000);
             $this->LogMessage("Timer auf 5s gesetzt für Entladelimit-Update", KL_DEBUG);
         }
-        
+
         return $result;
     }
 
@@ -584,28 +477,28 @@ class FossibotDevice extends IPSModule
     public function FBT_ClearTokenCache(): bool
     {
         $credentials = $this->GetDiscoveryCredentials();
-        
+
         if (!$credentials) {
             $this->LogMessage('Keine Discovery-Instanz konfiguriert', KL_ERROR);
             return false;
         }
-        
+
         try {
             require_once __DIR__ . '/../libs/FossibotConnectionPool.php';
             require_once __DIR__ . '/../libs/SydpowerClient.php';
-            
+
             // Pool zurücksetzen, um alle Connections zu schließen
             FossibotConnectionPool::reset();
-            
+
             // Token-Cache direkt leeren
             $client = new SydpowerClient($credentials['email'], $credentials['password']);
             $client->clearTokenCache();
-            
+
             $this->LogMessage('Token-Cache und Connection-Pool geleert', KL_NOTIFY);
             $this->SetValue('ConnectionStatus', 'Cache geleert');
-            
+
             return true;
-            
+
         } catch (Exception $e) {
             $this->LogMessage('Fehler beim Leeren des Cache: ' . $e->getMessage(), KL_ERROR);
             return false;
@@ -663,7 +556,7 @@ class FossibotDevice extends IPSModule
         require_once __DIR__ . '/../libs/FossibotConnectionPool.php';
         require_once __DIR__ . '/../libs/FossibotResponseValidator.php';
         require_once __DIR__ . '/../libs/FossibotSemaphore.php';
-        
+
         // Acquire semaphore to prevent collisions
         if (!FossibotSemaphore::acquire('mqtt_command', 5000)) {
             $this->LogMessage('Command blocked - another operation in progress', KL_WARNING);
@@ -685,23 +578,23 @@ class FossibotDevice extends IPSModule
                 $credentials['password'],
                 $this->InstanceID
             );
-            
+
             if (!$client) {
                 throw new Exception("Verbindung fehlgeschlagen");
             }
-            
+
             // Special handling for AC Output when charging current is 0
             if ($command === 'REGEnableACOutput') {
                 // Check current charging current
                 $status = $client->getDeviceStatus($deviceId);
                 $currentChargingCurrent = isset($status['maximumChargingCurrent']) ? $status['maximumChargingCurrent'] : 0;
-                
+
                 if ($currentChargingCurrent == 0) {
                     $this->LogMessage('AC Output benötigt Ladestrom > 0, setze auf 5A', KL_NOTIFY);
-                    
+
                     // Set charging current to 5A first
                     $client->sendCommand($deviceId, 'REGMaxChargeCurrent', 5);
-                    
+
                     // Wait for it to apply
                     $chargeResponse = FossibotResponseValidator::waitForValidResponse(
                         $client,
@@ -709,25 +602,25 @@ class FossibotDevice extends IPSModule
                         'REGMaxChargeCurrent',
                         5
                     );
-                    
+
                     if (!$chargeResponse['success']) {
                         $this->LogMessage('Warnung: Ladestrom konnte nicht gesetzt werden', KL_WARNING);
                     }
                 }
             }
-            
+
             // Send command
             $this->LogMessage("Sending command: $command with value: " . json_encode($value), KL_DEBUG);
             $result = $client->sendCommand($deviceId, $command, $value);
-            
+
             if (!$result) {
                 throw new Exception("Command konnte nicht gesendet werden");
             }
-            
+
             // Auto-refresh handling with intelligent response validation
             if ($autoRefresh) {
                 $this->LogMessage('Waiting for validated response...', KL_DEBUG);
-                
+
                 // Use ResponseValidator for intelligent waiting
                 $response = FossibotResponseValidator::waitForValidResponse(
                     $client,
@@ -735,28 +628,28 @@ class FossibotDevice extends IPSModule
                     $command,
                     $value
                 );
-                
+
                 if ($response['success']) {
                     // Update frontend with validated data
                     $this->ProcessStatusData($response['data']);
                     $this->SetValue('LastUpdate', time());
                     $this->SetValue('ConnectionStatus', 'Online');
-                    
+
                     $this->LogMessage("✅ Command successful in {$response['time']}ms", KL_NOTIFY);
-                    
+
                     // Release connection back to pool
                     FossibotConnectionPool::releaseConnection($this->InstanceID);
                     FossibotSemaphore::release('mqtt_command');
-                    
+
                     return true;
-                    
+
                 } else {
                     // Timeout or partial response
                     if (isset($response['partial']) && !empty($response['partial'])) {
                         $this->LogMessage('⚠️ Partial response received, updating what we have', KL_WARNING);
                         $this->ProcessStatusData($response['partial']);
                         $this->SetValue('LastUpdate', time());
-                        
+
                         // Bei Output-Commands: Wenn das Hauptfeld korrekt ist, ist es OK
                         $isOutputCommand = strpos($command, 'Output') !== false;
                         if ($isOutputCommand) {
@@ -769,14 +662,14 @@ class FossibotDevice extends IPSModule
                             } elseif (strpos($command, 'USBOutput') !== false && isset($response['partial']['usbOutput'])) {
                                 $outputOk = true;
                             }
-                            
+
                             if ($outputOk) {
                                 $this->SetValue('ConnectionStatus', 'Online');
                                 $this->LogMessage('Output-Command erfolgreich (trotz partial response)', KL_DEBUG);
                                 return true;
                             }
                         }
-                        
+
                         // Sonst als Warnung markieren
                         $this->SetValue('ConnectionStatus', 'Online (teilweise Daten)');
                     } else {
@@ -791,25 +684,25 @@ class FossibotDevice extends IPSModule
                 // Der Timer wird dann das Update durchführen
                 $this->SetValue('ConnectionStatus', 'Warte auf Update...');
             }
-            
+
             // Release resources
             FossibotConnectionPool::releaseConnection($this->InstanceID);
             FossibotSemaphore::release('mqtt_command');
-            
+
             return $result;
-            
+
         } catch (Exception $e) {
             $this->LogMessage('Fehler beim Senden: ' . $e->getMessage(), KL_ERROR);
             $this->SetValue('ConnectionStatus', 'Fehler: ' . $e->getMessage());
-            
+
             // Always release resources
             FossibotConnectionPool::releaseConnection($this->InstanceID);
             FossibotSemaphore::release('mqtt_command');
-            
+
             return false;
         }
     }
-    
+
     /**
      * Prüft ob Befehl Settings-Änderungen betrifft (braucht Auto-Refresh)
      */
@@ -817,17 +710,17 @@ class FossibotDevice extends IPSModule
     {
         $settingsCommands = [
             'REGChargeUpperLimit',
-            'REGMaxChargeCurrent', 
+            'REGMaxChargeCurrent',
             'REGStopChargeAfter',
             'REGDischargeLowerLimit',
             'REGUSBStandbyTime',
             'REGACStandbyTime',
             'REGDCStandbyTime'
         ];
-        
+
         return in_array($command, $settingsCommands);
     }
-    
+
 
     /**
      * Erstellt Custom Profile für Eingang-Status
@@ -835,7 +728,7 @@ class FossibotDevice extends IPSModule
     private function CreateChargingStatusProfile(): void
     {
         $profileName = 'FBT.ChargingStatus';
-        
+
         if (!IPS_VariableProfileExists($profileName)) {
             IPS_CreateVariableProfile($profileName, 2); // 2 = Float
             IPS_SetVariableProfileText($profileName, '', 'W');
@@ -845,12 +738,12 @@ class FossibotDevice extends IPSModule
     }
 
     /**
-     * Erstellt Custom Profile für Ausgang-Status  
+     * Erstellt Custom Profile für Ausgang-Status
      */
     private function CreateDischargingStatusProfile(): void
     {
         $profileName = 'FBT.DischargingStatus';
-        
+
         if (!IPS_VariableProfileExists($profileName)) {
             IPS_CreateVariableProfile($profileName, 2); // 2 = Float
             IPS_SetVariableProfileText($profileName, '', 'W');
@@ -865,7 +758,7 @@ class FossibotDevice extends IPSModule
     private function CreateChargingLimitProfile(): void
     {
         $profileName = 'FBT.ChargingLimit';
-        
+
         // Profile löschen falls vorhanden, um es neu zu erstellen
         if (IPS_VariableProfileExists($profileName)) {
             try {
@@ -875,11 +768,11 @@ class FossibotDevice extends IPSModule
                 return;
             }
         }
-        
+
         IPS_CreateVariableProfile($profileName, 1); // 1 = Integer
         IPS_SetVariableProfileText($profileName, '', '%');
         IPS_SetVariableProfileIcon($profileName, 'Battery');
-        
+
         // Nur die erlaubten Werte als Associations (ohne % in Text)
         IPS_SetVariableProfileAssociation($profileName, 60, '60', '', 0xFF0000);
         IPS_SetVariableProfileAssociation($profileName, 65, '65', '', 0xFF4000);
@@ -898,7 +791,7 @@ class FossibotDevice extends IPSModule
     private function CreateDischargeLimitProfile(): void
     {
         $profileName = 'FBT.DischargeLimit';
-        
+
         // Profile löschen falls vorhanden, um es neu zu erstellen
         if (IPS_VariableProfileExists($profileName)) {
             try {
@@ -908,11 +801,11 @@ class FossibotDevice extends IPSModule
                 return;
             }
         }
-        
+
         IPS_CreateVariableProfile($profileName, 1); // 1 = Integer
         IPS_SetVariableProfileText($profileName, '', '%');
         IPS_SetVariableProfileIcon($profileName, 'Battery');
-        
+
         // Nur die erlaubten Werte als Associations (ohne % in Text)
         IPS_SetVariableProfileAssociation($profileName, 0, '0', '', 0x00FF00);
         IPS_SetVariableProfileAssociation($profileName, 5, '5', '', 0x20FF00);
@@ -928,12 +821,12 @@ class FossibotDevice extends IPSModule
     }
 
     /**
-     * Erstellt Custom Profile für Ladestrom-Dropdown (1,5,10,15,20A)
+     * Erstellt Custom Profile für Ladestrom
      */
     private function CreateChargingCurrentProfile(): void
     {
         $profileName = 'FBT.ChargingCurrent';
-        
+
         // Profile löschen falls vorhanden, um es neu zu erstellen
         if (IPS_VariableProfileExists($profileName)) {
             try {
@@ -943,11 +836,11 @@ class FossibotDevice extends IPSModule
                 return;
             }
         }
-        
+
         IPS_CreateVariableProfile($profileName, 1); // 1 = Integer
         IPS_SetVariableProfileText($profileName, '', 'A');
         IPS_SetVariableProfileIcon($profileName, 'Electricity');
-        
+
         // Dropdown-Werte für F2400 (1-5A, da max 1100W AC)
         IPS_SetVariableProfileAssociation($profileName, 1, '1', '', 0x00FF00);
         IPS_SetVariableProfileAssociation($profileName, 2, '2', '', 0x40FF00);
@@ -957,62 +850,29 @@ class FossibotDevice extends IPSModule
     }
 
     /**
-     * Entfernt alle veralteten/irreführenden Variablen
-     */
-    private function CleanupOldVariables(): void
-    {
-        // Liste aller möglichen veralteten Variable-Idents
-        $oldVariables = [
-            'ChargingStatus',
-            'DischargingStatus', 
-            'Lädt gerade',
-            'Entlädt gerade',
-            'ChargingIndicator',
-            'DischargingIndicator'
-        ];
-        
-        foreach ($oldVariables as $ident) {
-            @$this->UnregisterVariable($ident);
-        }
-        
-        // Auch alle Variablen mit "gerade" im Namen finden und löschen
-        $allVars = IPS_GetChildrenIDs($this->InstanceID);
-        foreach ($allVars as $varID) {
-            if (IPS_GetObject($varID)['ObjectType'] == 2) { // 2 = Variable
-                $name = IPS_GetName($varID);
-                if (strpos($name, 'gerade') !== false || 
-                    strpos($name, 'Status') !== false && 
-                    (strpos($name, 'Lade') !== false || strpos($name, 'Entlade') !== false)) {
-                    @IPS_DeleteVariable($varID);
-                }
-            }
-        }
-    }
-
-    /**
      * Sucht automatisch die Discovery-Instanz und holt Zugangsdaten
      */
     private function GetDiscoveryCredentials(): ?array
     {
         $discoveryModuleID = '{A67EA473-8B4A-0901-E134-21F1363D9036}'; // FossibotDiscovery GUID
         $instances = IPS_GetInstanceListByModuleID($discoveryModuleID);
-        
+
         if (empty($instances)) {
             $this->LogMessage('Keine FossibotDiscovery-Instanz gefunden', KL_ERROR);
             return false;
         }
-        
+
         // Nimm die erste gefundene Discovery-Instanz
         $discoveryInstance = $instances[0];
-        
+
         $email = IPS_GetProperty($discoveryInstance, 'Email');
         $password = IPS_GetProperty($discoveryInstance, 'Password');
-        
+
         if (empty($email) || empty($password)) {
             $this->LogMessage('Discovery-Instanz hat keine Zugangsdaten konfiguriert', KL_ERROR);
             return false;
         }
-        
+
         return [
             'email' => $email,
             'password' => $password
