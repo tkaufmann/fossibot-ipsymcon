@@ -233,7 +233,9 @@ $libFiles = [
     'libs/MqttWebSocketClient.php',
     'libs/FossibotSemaphore.php',
     'libs/FossibotConnectionPool.php',
-    'libs/FossibotResponseValidator.php'
+    'libs/FossibotResponseValidator.php',
+    'FossibotDevice/module.php',
+    'FossibotDiscovery/module.php'
 ];
 
 foreach ($libFiles as $file) {

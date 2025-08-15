@@ -6,7 +6,7 @@
  */
 class FossibotDevice extends IPSModule
 {
-    public function Create()
+    public function Create(): void
     {
         parent::Create();
 
@@ -18,7 +18,7 @@ class FossibotDevice extends IPSModule
         $this->RegisterTimer('UpdateTimer', 0, 'IPS_RequestAction(' . $this->InstanceID . ', "TimerUpdate", true);');
     }
 
-    public function ApplyChanges()
+    public function ApplyChanges(): void
     {
         parent::ApplyChanges();
 
@@ -107,7 +107,7 @@ class FossibotDevice extends IPSModule
     /**
      * RequestAction Handler für Button-Aktionen
      */
-    public function RequestAction($Ident, $Value)
+    public function RequestAction(string $Ident, mixed $Value): void
     {
         switch ($Ident) {
             case 'RefreshNow':
@@ -173,7 +173,7 @@ class FossibotDevice extends IPSModule
     /**
      * Gerätestatus aktualisieren
      */
-    public function FBT_UpdateDeviceStatus()
+    public function FBT_UpdateDeviceStatus(): bool
     {
         $deviceId = $this->ReadPropertyString('DeviceID');
         $credentials = $this->GetDiscoveryCredentials();
@@ -293,7 +293,7 @@ class FossibotDevice extends IPSModule
     /**
      * Statusdaten verarbeiten und Variablen aktualisieren
      */
-    private function ProcessStatusData($status)
+    private function ProcessStatusData(array $status): void
     {
         // KOMPLETTE MQTT-RESPONSE LOGGEN
         $this->LogMessage('MQTT-RESPONSE KOMPLETT: ' . json_encode($status, JSON_PARTIAL_OUTPUT_ON_ERROR), KL_NOTIFY);
@@ -369,7 +369,7 @@ class FossibotDevice extends IPSModule
     /**
      * Aktualisierungsintervall ändern
      */
-    public function FBT_SetUpdateInterval(int $seconds)
+    public function FBT_SetUpdateInterval(int $seconds): bool
     {
         if ($seconds < 30) {
             $this->LogMessage('Aktualisierungsintervall muss mindestens 30 Sekunden betragen (Keep-Alive für F2400)', KL_WARNING);
@@ -386,7 +386,7 @@ class FossibotDevice extends IPSModule
     /**
      * Manuelle Aktualisierung auslösen
      */
-    public function FBT_RefreshNow()
+    public function FBT_RefreshNow(): bool
     {
         return $this->FBT_UpdateDeviceStatus();
     }
@@ -394,7 +394,7 @@ class FossibotDevice extends IPSModule
     /**
      * Cache löschen (z.B. wenn Discovery neue Geräte sucht)
      */
-    public function FBT_ClearDeviceCache()
+    public function FBT_ClearDeviceCache(): bool
     {
         // Statische Variablen zurücksetzen
         $clearCache = function() {
@@ -412,7 +412,7 @@ class FossibotDevice extends IPSModule
     /**
      * Geräteinformationen abrufen
      */
-    public function FBT_GetDeviceInfo()
+    public function FBT_GetDeviceInfo(): string
     {
         $info = [
             'DeviceID' => $this->ReadPropertyString('DeviceID'),
@@ -428,7 +428,7 @@ class FossibotDevice extends IPSModule
     /**
      * AC-Ausgang ein-/ausschalten
      */
-    public function FBT_SetACOutput(bool $enabled, bool $statusUpdate = true)
+    public function FBT_SetACOutput(bool $enabled, bool $statusUpdate = true): bool
     {
         $command = $enabled ? 'REGEnableACOutput' : 'REGDisableACOutput';
         $statusText = $enabled ? 'Schalte AC-Ausgang ein' : 'Schalte AC-Ausgang aus';
@@ -441,7 +441,7 @@ class FossibotDevice extends IPSModule
     /**
      * DC-Ausgang ein-/ausschalten
      */
-    public function FBT_SetDCOutput(bool $enabled, bool $statusUpdate = true)
+    public function FBT_SetDCOutput(bool $enabled, bool $statusUpdate = true): bool
     {
         $command = $enabled ? 'REGEnableDCOutput' : 'REGDisableDCOutput';
         $statusText = $enabled ? 'Schalte DC-Ausgang ein' : 'Schalte DC-Ausgang aus';
@@ -454,7 +454,7 @@ class FossibotDevice extends IPSModule
     /**
      * USB-Ausgang ein-/ausschalten
      */
-    public function FBT_SetUSBOutput(bool $enabled, bool $statusUpdate = true)
+    public function FBT_SetUSBOutput(bool $enabled, bool $statusUpdate = true): bool
     {
         $command = $enabled ? 'REGEnableUSBOutput' : 'REGDisableUSBOutput';
         $statusText = $enabled ? 'Schalte USB-Ausgang ein' : 'Schalte USB-Ausgang aus';
@@ -467,7 +467,7 @@ class FossibotDevice extends IPSModule
     /**
      * Ladelimit setzen (60-100%)
      */
-    public function FBT_SetChargingLimit(int $percent, bool $statusUpdate = true)
+    public function FBT_SetChargingLimit(int $percent, bool $statusUpdate = true): bool
     {
         if ($percent < 60 || $percent > 100) {
             $this->LogMessage('Ladelimit muss zwischen 60-100% liegen', KL_ERROR);
@@ -496,7 +496,7 @@ class FossibotDevice extends IPSModule
     /**
      * Maximalen Ladestrom setzen (1-5A für F2400, max 1100W)
      */
-    public function FBT_SetMaxChargingCurrent(int $ampere, bool $statusUpdate = true)
+    public function FBT_SetMaxChargingCurrent(int $ampere, bool $statusUpdate = true): bool
     {
         // F2400 unterstützt nur 1-5A Ladestrom (max 1100W)
         if ($ampere < 1 || $ampere > 5) {
@@ -526,7 +526,7 @@ class FossibotDevice extends IPSModule
     /**
      * Lade-Timer setzen (in Minuten)
      */
-    public function FBT_SetChargeTimer(int $minutes, bool $statusUpdate = true)
+    public function FBT_SetChargeTimer(int $minutes, bool $statusUpdate = true): bool
     {
         if ($minutes < 0) {
             $this->LogMessage('Lade-Timer muss positiv sein', KL_ERROR);
@@ -541,7 +541,7 @@ class FossibotDevice extends IPSModule
     /**
      * Entladelimit setzen (0-50%)
      */
-    public function FBT_SetDischargeLimit(int $percent, bool $statusUpdate = true)
+    public function FBT_SetDischargeLimit(int $percent, bool $statusUpdate = true): bool
     {
         if ($percent < 0 || $percent > 50) {
             $this->LogMessage('Entladelimit muss zwischen 0-50% liegen', KL_ERROR);
@@ -571,7 +571,7 @@ class FossibotDevice extends IPSModule
     /**
      * Geräteeinstellungen manuell anfordern
      */
-    public function FBT_RequestSettings()
+    public function FBT_RequestSettings(): bool
     {
         // Einfach den Command senden - SendDeviceCommand kümmert sich um alles
         $this->SetValue('ConnectionStatus', 'Fordere Einstellungen an...');
@@ -581,7 +581,7 @@ class FossibotDevice extends IPSModule
     /**
      * Token-Cache leeren (bei Token-Problemen)
      */
-    public function FBT_ClearTokenCache()
+    public function FBT_ClearTokenCache(): bool
     {
         $credentials = $this->GetDiscoveryCredentials();
         
@@ -648,7 +648,7 @@ class FossibotDevice extends IPSModule
     /**
      * Befehl an das Gerät senden - REFACTORED mit neuen Pool/Validator/Semaphore Klassen
      */
-    private function SendDeviceCommand(string $command, $value, bool $autoRefresh = true)
+    private function SendDeviceCommand(string $command, $value, bool $autoRefresh = true): bool
     {
         $deviceId = $this->ReadPropertyString('DeviceID');
         $credentials = $this->GetDiscoveryCredentials();
@@ -832,7 +832,7 @@ class FossibotDevice extends IPSModule
     /**
      * Erstellt Custom Profile für Eingang-Status
      */
-    private function CreateChargingStatusProfile()
+    private function CreateChargingStatusProfile(): void
     {
         $profileName = 'FBT.ChargingStatus';
         
@@ -847,7 +847,7 @@ class FossibotDevice extends IPSModule
     /**
      * Erstellt Custom Profile für Ausgang-Status  
      */
-    private function CreateDischargingStatusProfile()
+    private function CreateDischargingStatusProfile(): void
     {
         $profileName = 'FBT.DischargingStatus';
         
@@ -862,7 +862,7 @@ class FossibotDevice extends IPSModule
     /**
      * Erstellt Custom Profile für Ladelimit-Slider (60-100%)
      */
-    private function CreateChargingLimitProfile()
+    private function CreateChargingLimitProfile(): void
     {
         $profileName = 'FBT.ChargingLimit';
         
@@ -895,7 +895,7 @@ class FossibotDevice extends IPSModule
     /**
      * Erstellt Custom Profile für Entladelimit-Slider (0-50%)
      */
-    private function CreateDischargeLimitProfile()
+    private function CreateDischargeLimitProfile(): void
     {
         $profileName = 'FBT.DischargeLimit';
         
@@ -930,7 +930,7 @@ class FossibotDevice extends IPSModule
     /**
      * Erstellt Custom Profile für Ladestrom-Dropdown (1,5,10,15,20A)
      */
-    private function CreateChargingCurrentProfile()
+    private function CreateChargingCurrentProfile(): void
     {
         $profileName = 'FBT.ChargingCurrent';
         
@@ -959,7 +959,7 @@ class FossibotDevice extends IPSModule
     /**
      * Entfernt alle veralteten/irreführenden Variablen
      */
-    private function CleanupOldVariables()
+    private function CleanupOldVariables(): void
     {
         // Liste aller möglichen veralteten Variable-Idents
         $oldVariables = [
@@ -992,7 +992,7 @@ class FossibotDevice extends IPSModule
     /**
      * Sucht automatisch die Discovery-Instanz und holt Zugangsdaten
      */
-    private function GetDiscoveryCredentials()
+    private function GetDiscoveryCredentials(): ?array
     {
         $discoveryModuleID = '{A67EA473-8B4A-0901-E134-21F1363D9036}'; // FossibotDiscovery GUID
         $instances = IPS_GetInstanceListByModuleID($discoveryModuleID);

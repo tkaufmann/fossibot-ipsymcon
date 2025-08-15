@@ -8,7 +8,7 @@ class FossibotDiscovery extends IPSModule
 {
     private $client = null;
     
-    public function Create()
+    public function Create(): void
     {
         parent::Create();
 
@@ -21,7 +21,7 @@ class FossibotDiscovery extends IPSModule
         $this->RegisterVariableInteger('DeviceCount', 'Gefundene Geräte', '', 2);
     }
 
-    public function ApplyChanges()
+    public function ApplyChanges(): void
     {
         parent::ApplyChanges();
         
@@ -36,7 +36,7 @@ class FossibotDiscovery extends IPSModule
     /**
      * Konfigurationsformular - verwende statische form.json
      */
-    public function GetConfigurationForm()
+    public function GetConfigurationForm(): string
     {
         return file_get_contents(__DIR__ . '/form.json');
     }
@@ -44,7 +44,7 @@ class FossibotDiscovery extends IPSModule
     /**
      * RequestAction Handler für Button-Aktionen
      */
-    public function RequestAction($Ident, $Value)
+    public function RequestAction(string $Ident, mixed $Value): void
     {
         switch ($Ident) {
             case 'DiscoverDevices':
@@ -79,7 +79,7 @@ class FossibotDiscovery extends IPSModule
     /**
      * Geräte suchen und konfigurieren
      */
-    public function FBD_DiscoverDevices()
+    public function FBD_DiscoverDevices(): bool
     {
         try {
             $client = $this->getClient();
@@ -125,7 +125,7 @@ class FossibotDiscovery extends IPSModule
     /**
      * Instanz für Gerät erstellen
      */
-    public function FBD_CreateDeviceInstance(string $deviceId, string $deviceName)
+    public function FBD_CreateDeviceInstance(string $deviceId, string $deviceName): int
     {
         // Prüfen ob Instanz bereits existiert
         $existingInstance = $this->GetInstanceByDeviceID($deviceId);
