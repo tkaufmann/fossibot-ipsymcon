@@ -1002,7 +1002,7 @@ class FossibotDevice extends IPSModuleStrict
         
         if (empty($email) || empty($password)) {
             $this->LogMessage('Discovery-Instanz hat keine Zugangsdaten konfiguriert', KL_ERROR);
-            return false;
+            return null;
         }
         
         return [
