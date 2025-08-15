@@ -991,11 +991,17 @@ class FossibotDevice extends IPSModuleStrict
         
         if (empty($instances)) {
             $this->LogMessage('Keine FossibotDiscovery-Instanz gefunden', KL_ERROR);
-            return false;
+            return null;
         }
         
         // Nimm die erste gefundene Discovery-Instanz
         $discoveryInstance = $instances[0];
+        
+        // Validiere dass die Instanz existiert
+        if (!IPS_InstanceExists($discoveryInstance)) {
+            $this->LogMessage('Discovery-Instanz existiert nicht', KL_ERROR);
+            return null;
+        }
         
         $email = IPS_GetProperty($discoveryInstance, 'Email');
         $password = IPS_GetProperty($discoveryInstance, 'Password');
