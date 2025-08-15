@@ -323,19 +323,11 @@ class FossibotDevice extends IPSModule
      */
     public function FBT_SetACOutput(bool $enabled, bool $statusUpdate = true): bool
     {
-        $statusText = $enabled ? 'Schalte AC-Ausgang ein' : 'Schalte AC-Ausgang aus';
+        $this->LogMessage("FBT_SetACOutput: " . ($enabled ? 'EIN' : 'AUS'), KL_DEBUG);
         
-        // Status anzeigen
-        $this->SetValue('ConnectionStatus', $statusText . '...');
-        $this->LogMessage("AC Output: " . ($enabled ? 'EIN' : 'AUS'), KL_NOTIFY);
-        
-        // Variable sofort setzen (optimistische UI)
-        $this->SetValue('ACOutput', $enabled);
-        
-        // Timer sofort auslösen (nutzt bewährte Timer-Logik für Command-Senden)
-        $this->SetTimerInterval('UpdateTimer', 1); // 1ms = sofort
-        
-        return true;
+        // Triggere den bewährten RequestAction-Handler
+        $acOutputID = $this->GetIDForIdent('ACOutput');
+        return $this->RequestAction($acOutputID, $enabled);
     }
 
     /**
@@ -343,19 +335,11 @@ class FossibotDevice extends IPSModule
      */
     public function FBT_SetDCOutput(bool $enabled, bool $statusUpdate = true): bool
     {
-        $statusText = $enabled ? 'Schalte DC-Ausgang ein' : 'Schalte DC-Ausgang aus';
+        $this->LogMessage("FBT_SetDCOutput: " . ($enabled ? 'EIN' : 'AUS'), KL_DEBUG);
         
-        // Status anzeigen
-        $this->SetValue('ConnectionStatus', $statusText . '...');
-        $this->LogMessage("DC Output: " . ($enabled ? 'EIN' : 'AUS'), KL_NOTIFY);
-        
-        // Variable sofort setzen (optimistische UI)
-        $this->SetValue('DCOutput', $enabled);
-        
-        // Timer sofort auslösen (nutzt bewährte Timer-Logik für Command-Senden)
-        $this->SetTimerInterval('UpdateTimer', 1); // 1ms = sofort
-        
-        return true;
+        // Triggere den bewährten RequestAction-Handler
+        $dcOutputID = $this->GetIDForIdent('DCOutput');
+        return $this->RequestAction($dcOutputID, $enabled);
     }
 
     /**
@@ -363,19 +347,11 @@ class FossibotDevice extends IPSModule
      */
     public function FBT_SetUSBOutput(bool $enabled, bool $statusUpdate = true): bool
     {
-        $statusText = $enabled ? 'Schalte USB-Ausgang ein' : 'Schalte USB-Ausgang aus';
+        $this->LogMessage("FBT_SetUSBOutput: " . ($enabled ? 'EIN' : 'AUS'), KL_DEBUG);
         
-        // Status anzeigen
-        $this->SetValue('ConnectionStatus', $statusText . '...');
-        $this->LogMessage("USB Output: " . ($enabled ? 'EIN' : 'AUS'), KL_NOTIFY);
-        
-        // Variable sofort setzen (optimistische UI)
-        $this->SetValue('USBOutput', $enabled);
-        
-        // Timer sofort auslösen (nutzt bewährte Timer-Logik für Command-Senden)
-        $this->SetTimerInterval('UpdateTimer', 1); // 1ms = sofort
-        
-        return true;
+        // Triggere den bewährten RequestAction-Handler
+        $usbOutputID = $this->GetIDForIdent('USBOutput');
+        return $this->RequestAction($usbOutputID, $enabled);
     }
 
     /**
@@ -578,8 +554,8 @@ class FossibotDevice extends IPSModule
         require_once __DIR__ . '/../libs/FossibotResponseValidator.php';
         require_once __DIR__ . '/../libs/FossibotSemaphore.php';
 
-        // Acquire semaphore to prevent collisions
-        if (!FossibotSemaphore::acquire('mqtt_command', 5000)) {
+        // Acquire semaphore to prevent collisions (kurzer Timeout)
+        if (!FossibotSemaphore::acquire('mqtt_command', 100)) { // 100ms statt 5000ms
             $this->LogMessage('Command blocked - another operation in progress', KL_WARNING);
             $this->SetValue('ConnectionStatus', 'Warte auf andere Operation...');
             return false;
