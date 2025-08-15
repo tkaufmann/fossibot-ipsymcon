@@ -4,7 +4,7 @@
  * ABOUTME: Fossibot Device Modul für IP-Symcon
  * ABOUTME: Stellt ein einzelnes Fossibot Gerät dar und verwaltet dessen Status
  */
-class FossibotDevice extends IPSModule
+class FossibotDevice extends IPSModuleStrict
 {
     public function Create(): void
     {
