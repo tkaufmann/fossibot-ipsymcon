@@ -4,7 +4,7 @@
     "type": 3,
     "vendor": "Fossibot",
     "aliases": ["Fossibot F2400", "Fossibot F3600", "Generic Powerstation"],
-    "url": "https://github.com/tim/fossibot",
+    "url": "https://github.com/tkaufmann/fossibot-ipsymcon",
     "parentRequirements": [],
     "childRequirements": [],
     "implemented": [],

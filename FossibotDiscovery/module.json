@@ -4,7 +4,7 @@
     "type": 4,
     "vendor": "Fossibot",
     "aliases": ["Fossibot Konfigurator", "Fossibot Discovery"],
-    "url": "https://github.com/tim/fossibot",
+    "url": "https://github.com/tkaufmann/fossibot-ipsymcon",
     "parentRequirements": [],
     "childRequirements": [],
     "implemented": [],
