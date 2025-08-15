@@ -42,7 +42,6 @@ Ein **experimentelles** IP-Symcon Modul zur Überwachung und Steuerung von Fossi
 
 ### Was NICHT getestet ist ⚠️
 - **Skript-Integration**: Die PHP-Funktionen existieren, aber ich habe sie nicht ausgiebig getestet
-- **Event-System**: Automatisierungen basierend auf Werten sind theoretisch möglich
 - **Mehrere Geräte**: Nur ein F2400 getestet
 - **Langzeitstabilität**: Läuft erst seit August 2025 bei mir
 
