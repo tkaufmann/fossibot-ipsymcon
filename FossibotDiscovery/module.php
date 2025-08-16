@@ -95,22 +95,28 @@ class FossibotDiscovery extends IPSModuleStrict
             $client = $this->getClient();
             $devices = $client->getDevices();
             
+            // Falls noch keine Geräte gefunden wurden
+            if (empty($devices)) {
+                return [];
+            }
+            
             $configuratorDevices = [];
-            foreach ($devices as $device) {
-                $deviceId = $device['deviceId'] ?? 'unknown';
-                $deviceName = $device['deviceName'] ?? 'Unbekanntes Gerät';
+            foreach ($devices as $deviceId => $device) {
+                // SydpowerClient gibt device_id und device_name zurück
+                $cleanDeviceId = str_replace(':', '', $device['device_id'] ?? $deviceId);
+                $deviceName = $device['device_name'] ?? $device['deviceName'] ?? 'Unbekanntes Gerät';
                 
                 // Prüfen ob bereits eine Instanz für dieses Gerät existiert
-                $instanceID = $this->findExistingInstance($deviceId);
+                $instanceID = $this->findExistingInstance($cleanDeviceId);
                 
                 $configuratorDevices[] = [
                     "name" => $deviceName,
-                    "deviceId" => $deviceId,
+                    "deviceId" => $cleanDeviceId,
                     "instanceID" => $instanceID,
                     "create" => [
                         "moduleID" => "{58C595CB-5ABE-95CA-C1BC-26C5DBA45460}", // FossibotDevice GUID
                         "configuration" => [
-                            "DeviceID" => $deviceId,
+                            "DeviceID" => $cleanDeviceId,
                             "DeviceName" => $deviceName
                         ]
                     ]
