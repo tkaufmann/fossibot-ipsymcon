@@ -46,10 +46,13 @@ class FossibotDiscovery extends IPSModuleStrict
         $discoveredDevices = [];
         
         try {
-            $lastDiscovery = GetValue($this->GetIDForIdent('LastDiscovery'));
-            if (!empty($lastDiscovery)) {
-                // Nur wenn schon eine Suche stattgefunden hat, lade die Geräte
-                $discoveredDevices = $this->getDiscoveredDevices();
+            $lastDiscoveryID = @$this->GetIDForIdent('LastDiscovery');
+            if ($lastDiscoveryID !== false) {
+                $lastDiscovery = GetValue($lastDiscoveryID);
+                if (!empty($lastDiscovery)) {
+                    // Nur wenn schon eine Suche stattgefunden hat, lade die Geräte
+                    $discoveredDevices = $this->getDiscoveredDevices();
+                }
             }
         } catch (Exception $e) {
             // Wenn Variable nicht existiert oder anderer Fehler - keine Geräte laden
@@ -110,7 +113,11 @@ class FossibotDiscovery extends IPSModuleStrict
         
         // Prüfe ob überhaupt Geräte gefunden wurden
         try {
-            $foundDevicesCount = GetValue($this->GetIDForIdent('FoundDevices'));
+            $foundDevicesID = @$this->GetIDForIdent('FoundDevices');
+            if ($foundDevicesID === false) {
+                return []; // Variable existiert noch nicht
+            }
+            $foundDevicesCount = GetValue($foundDevicesID);
             if ($foundDevicesCount == 0) {
                 return [];
             }
