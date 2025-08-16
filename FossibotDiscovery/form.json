@@ -17,18 +17,18 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "Geben Sie Ihre Fossibot-Zugangsdaten ein und klicken Sie 'Geräte suchen'.",
+                    "caption": "Geben Sie Ihre Fossibot-Zugangsdaten ein und speichern Sie die Konfiguration.",
                     "italic": true
+                },
+                {
+                    "type": "Button",
+                    "caption": "Übernehmen",
+                    "onClick": "IPS_ApplyChanges($id);"
                 }
             ]
         }
     ],
     "actions": [
-        {
-            "type": "Button",
-            "caption": "Übernehmen",
-            "onClick": "IPS_ApplyChanges($id);"
-        },
         {
             "type": "Button", 
             "caption": "Geräte suchen",
