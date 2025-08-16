@@ -712,7 +712,7 @@ class FossibotDevice extends IPSModuleStrict
             $this->LogMessage("Sending command: $command with value: " . json_encode($value), KL_DEBUG);
             $result = $client->sendCommand($deviceId, $command, $value);
             
-            if (!$result) {
+            if (empty($result) || !is_array($result)) {
                 throw new Exception("Command konnte nicht gesendet werden");
             }
             
@@ -788,7 +788,7 @@ class FossibotDevice extends IPSModuleStrict
             FossibotConnectionPool::releaseConnection($this->InstanceID);
             FossibotSemaphore::release('mqtt_command');
             
-            return $result;
+            return true;
             
         } catch (Exception $e) {
             $this->LogMessage('Fehler beim Senden: ' . $e->getMessage(), KL_ERROR);
