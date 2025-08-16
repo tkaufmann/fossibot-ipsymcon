@@ -128,9 +128,9 @@ class FossibotDiscovery extends IPSModuleStrict
                     "create" => [
                         "moduleID" => "{58C595CB-5ABE-95CA-C1BC-26C5DBA45460}",
                         "configuration" => [
-                            "DeviceID" => $cleanDeviceId,
-                            "DeviceName" => $deviceName
-                        ]
+                            "DeviceID" => $cleanDeviceId
+                        ],
+                        "name" => $deviceName
                     ]
                 ];
             }
@@ -193,9 +193,9 @@ class FossibotDiscovery extends IPSModuleStrict
                     "create" => [
                         "moduleID" => "{58C595CB-5ABE-95CA-C1BC-26C5DBA45460}", // FossibotDevice GUID
                         "configuration" => [
-                            "DeviceID" => $cleanDeviceId,
-                            "DeviceName" => $deviceName
-                        ]
+                            "DeviceID" => $cleanDeviceId
+                        ],
+                        "name" => $deviceName
                     ]
                 ];
             }
