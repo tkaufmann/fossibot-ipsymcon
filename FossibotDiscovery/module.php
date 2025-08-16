@@ -61,19 +61,19 @@ class FossibotDiscovery extends IPSModuleStrict
                     [
                         "caption" => "Gerätename",
                         "name" => "name", 
-                        "width" => "200px",
+                        "width" => "auto",
                         "add" => ""
                     ],
                     [
                         "caption" => "Geräte-ID",
                         "name" => "deviceId",
-                        "width" => "200px", 
+                        "width" => "auto", 
                         "add" => ""
                     ],
                     [
                         "caption" => "Status",
                         "name" => "instanceID",
-                        "width" => "120px",
+                        "width" => "auto",
                         "add" => 0
                     ]
                 ],
