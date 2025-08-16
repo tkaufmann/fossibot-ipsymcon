@@ -346,8 +346,13 @@ class FossibotDiscovery extends IPSModuleStrict
             if ($cacheID === false) {
                 // Variable noch nicht registriert, erstelle sie
                 $this->RegisterVariableString('DeviceCache', 'Geräte-Cache', '', 3);
+                $this->LogMessage('📝 DeviceCache Variable wurde erstellt', KL_NOTIFY);
             }
-            $this->SetValue('DeviceCache', json_encode($configuratorDevices));
+            
+            $cacheData = json_encode($configuratorDevices);
+            $this->LogMessage('💾 Speichere Cache-Daten: ' . strlen($cacheData) . ' Zeichen', KL_NOTIFY);
+            $this->SetValue('DeviceCache', $cacheData);
+            $this->LogMessage('✅ Cache-Daten gespeichert', KL_NOTIFY);
 
             return true;
 
