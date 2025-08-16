@@ -3,7 +3,7 @@
     "name": "FossibotDiscovery",
     "type": 5,
     "vendor": "Fossibot",
-    "aliases": ["Fossibot Discovery", "Fossibot Device Discovery"],
+    "aliases": ["Fossibot Device Discovery"],
     "url": "https://github.com/tkaufmann/fossibot-ipsymcon",
     "parentRequirements": [],
     "childRequirements": [],

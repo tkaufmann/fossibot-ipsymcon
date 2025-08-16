@@ -38,7 +38,106 @@ class FossibotDiscovery extends IPSModuleStrict
      */
     public function GetConfigurationForm(): string
     {
-        return file_get_contents(__DIR__ . '/form.json');
+        // Basis-Form laden
+        $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
+        
+        // Gefundene Geräte als Configurator-Liste hinzufügen
+        $discoveredDevices = $this->getDiscoveredDevices();
+        
+        if (!empty($discoveredDevices)) {
+            // Configurator-Element für gefundene Geräte hinzufügen
+            $configuratorElement = [
+                "type" => "Configurator",
+                "name" => "DeviceConfigurator", 
+                "caption" => "Gefundene Geräte",
+                "rowCount" => min(count($discoveredDevices), 10),
+                "add" => false,
+                "delete" => false,
+                "sort" => [
+                    "column" => "name",
+                    "direction" => "ascending"
+                ],
+                "columns" => [
+                    [
+                        "caption" => "Name",
+                        "name" => "name", 
+                        "width" => "200px",
+                        "add" => ""
+                    ],
+                    [
+                        "caption" => "Geräte-ID",
+                        "name" => "deviceId",
+                        "width" => "150px", 
+                        "add" => ""
+                    ],
+                    [
+                        "caption" => "Status",
+                        "name" => "instanceID",
+                        "width" => "150px",
+                        "add" => 0
+                    ]
+                ],
+                "values" => $discoveredDevices
+            ];
+            
+            $form["elements"][] = $configuratorElement;
+        }
+        
+        return json_encode($form);
+    }
+    
+    /**
+     * Gefundene Geräte für Configurator aufbereiten
+     */
+    private function getDiscoveredDevices(): array
+    {
+        try {
+            $client = $this->getClient();
+            $devices = $client->getDevices();
+            
+            $configuratorDevices = [];
+            foreach ($devices as $device) {
+                $deviceId = $device['deviceId'] ?? 'unknown';
+                $deviceName = $device['deviceName'] ?? 'Unbekanntes Gerät';
+                
+                // Prüfen ob bereits eine Instanz für dieses Gerät existiert
+                $instanceID = $this->findExistingInstance($deviceId);
+                
+                $configuratorDevices[] = [
+                    "name" => $deviceName,
+                    "deviceId" => $deviceId,
+                    "instanceID" => $instanceID,
+                    "create" => [
+                        "moduleID" => "{58C595CB-5ABE-95CA-C1BC-26C5DBA45460}", // FossibotDevice GUID
+                        "configuration" => [
+                            "DeviceID" => $deviceId,
+                            "DeviceName" => $deviceName
+                        ]
+                    ]
+                ];
+            }
+            
+            return $configuratorDevices;
+            
+        } catch (Exception $e) {
+            $this->LogMessage('Fehler beim Laden der Geräteliste: ' . $e->getMessage(), KL_ERROR);
+            return [];
+        }
+    }
+    
+    /**
+     * Prüfen ob bereits eine Instanz für ein Gerät existiert
+     */
+    private function findExistingInstance(string $deviceId): int
+    {
+        $instances = IPS_GetInstanceListByModuleID("{58C595CB-5ABE-95CA-C1BC-26C5DBA45460}");
+        foreach ($instances as $instanceID) {
+            $deviceID = IPS_GetProperty($instanceID, 'DeviceID');
+            if ($deviceID === $deviceId) {
+                return $instanceID;
+            }
+        }
+        return 0;
     }
 
     /**
