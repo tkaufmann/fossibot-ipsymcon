@@ -97,26 +97,6 @@ class FossibotDiscovery extends IPSModuleStrict
 
         $form["elements"][] = $configuratorElement;
 
-        // Status-Info hinzufügen falls verfügbar
-        try {
-            $deviceCountID = @$this->GetIDForIdent('DeviceCount');
-            if ($deviceCountID !== false) {
-                $deviceCount = GetValue($deviceCountID);
-                if ($deviceCount > 0) {
-                    // Zeige Info über gefundene Geräte
-                    $lastDiscoveryID = @$this->GetIDForIdent('LastDiscovery');
-                    $lastDiscovery = $lastDiscoveryID !== false ? GetValue($lastDiscoveryID) : 'Unbekannt';
-                    
-                    $infoElement = [
-                        "type" => "Label",
-                        "caption" => "✅ {$deviceCount} Geräte gefunden am {$lastDiscovery}. Klicke 'Geräte suchen' für aktuelle Liste."
-                    ];
-                    $form["elements"][] = $infoElement;
-                }
-            }
-        } catch (Exception $e) {
-            // Ignoriere Fehler - Dialog soll trotzdem schnell öffnen
-        }
 
         return json_encode($form);
     }

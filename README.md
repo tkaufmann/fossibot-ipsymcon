@@ -147,10 +147,7 @@ AC-Ausgang: On        (Bypass-Modus bei vollem Akku)
 
 ## 🎮 Skript-Integration
 
-**Status-Update Parameter:** Der letzte `$statusUpdate` Parameter (boolean) bestimmt, ob nach dem Befehl automatisch ein Status-Update ausgelöst wird:
-
-- `true`: Sofortiges Status-Update (empfohlen für wichtige Änderungen)
-- `false`: Kein automatisches Update (schneller, Update erfolgt beim nächsten Timer)
+Die Fossibot Module stellen globale PHP-Funktionen zur Verfügung, die in IPSymcon-Skripten verwendet werden können.
 
 ### Verfügbare Befehle
 
@@ -159,21 +156,21 @@ AC-Ausgang: On        (Bypass-Modus bei vollem Akku)
 $fossibotID = 12345; // Ersetze mit deiner echten ID
 
 // === AUSGÄNGE STEUERN ===
-FBT_SetACOutput($fossibotID, true, true);   // AC-Ausgang einschalten mit Status-Update
-FBT_SetACOutput($fossibotID, false, false); // AC-Ausgang ausschalten ohne Status-Update
+FBT_SetACOutput($fossibotID, true);    // AC-Ausgang einschalten
+FBT_SetACOutput($fossibotID, false);   // AC-Ausgang ausschalten
 
-FBT_SetDCOutput($fossibotID, true, true);   // DC-Ausgang einschalten mit Status-Update  
-FBT_SetDCOutput($fossibotID, false, true);  // DC-Ausgang ausschalten mit Status-Update
+FBT_SetDCOutput($fossibotID, true);    // DC-Ausgang einschalten  
+FBT_SetDCOutput($fossibotID, false);   // DC-Ausgang ausschalten
 
-FBT_SetUSBOutput($fossibotID, true, true);  // USB-Ausgang einschalten mit Status-Update
-FBT_SetUSBOutput($fossibotID, false, true); // USB-Ausgang ausschalten mit Status-Update
+FBT_SetUSBOutput($fossibotID, true);   // USB-Ausgang einschalten
+FBT_SetUSBOutput($fossibotID, false);  // USB-Ausgang ausschalten
 
 // === LADEPARAMETER (F2400: 1-5A) ===
-FBT_SetMaxChargingCurrent($fossibotID, 3, true);   // Ladestrom: 3A (690W) mit Status-Update
-FBT_SetMaxChargingCurrent($fossibotID, 5, true);   // Ladestrom: 5A (1150W) mit Status-Update
+FBT_SetMaxChargingCurrent($fossibotID, 3);   // Ladestrom: 3A (690W)
+FBT_SetMaxChargingCurrent($fossibotID, 5);   // Ladestrom: 5A (1150W)
 
-FBT_SetChargingLimit($fossibotID, 80, true);   // Ladelimit: 80% (60-100%) mit Status-Update
-FBT_SetDischargeLimit($fossibotID, 20, true);  // Entladelimit: 20% (0-50%) mit Status-Update
+FBT_SetChargingLimit($fossibotID, 80);   // Ladelimit: 80% (60-100%)
+FBT_SetDischargeLimit($fossibotID, 20);  // Entladelimit: 20% (0-50%)
 
 // === STATUS & UPDATES ===
 FBT_UpdateDeviceStatus($fossibotID);           // Status manuell aktualisieren
@@ -187,30 +184,30 @@ FBT_ClearTokenCache($fossibotID);                  // Token-Cache leeren
 
 ### Praktische Beispiele
 
-✅ **Diese Beispiele verwenden die korrekte, getestete Signatur:**
+✅ **Diese Beispiele verwenden die aktuellen, vereinfachten Funktions-Signaturen:**
 
 ```php
 // Zeitgesteuertes Laden
-FBT_SetMaxChargingCurrent($fossibotID, 1, true);  // Nachts: Eco-Modus mit Update
-FBT_SetMaxChargingCurrent($fossibotID, 3, true);  // Tags: Normal-Modus mit Update
+FBT_SetMaxChargingCurrent($fossibotID, 1);  // Nachts: Eco-Modus
+FBT_SetMaxChargingCurrent($fossibotID, 3);  // Tags: Normal-Modus
 
 // Batterie-Level basierte Steuerung
 $soc = GetValue(IPS_GetObjectIDByIdent('BatterySOC', $fossibotID));
 if ($soc < 20) {
-    FBT_SetMaxChargingCurrent($fossibotID, 5, true);  // Notladung mit Update
+    FBT_SetMaxChargingCurrent($fossibotID, 5);  // Notladung
 }
 
 // Nacht-Modus: Alle Ausgänge aus, minimales Laden
-FBT_SetACOutput($fossibotID, false, false);        // AC aus (ohne Update)
-FBT_SetDCOutput($fossibotID, true, false);         // DC an für Router (ohne Update)  
-FBT_SetUSBOutput($fossibotID, false, false);       // USB aus (ohne Update)
-FBT_SetMaxChargingCurrent($fossibotID, 1, true);   // Eco-Laden (mit Update)
+FBT_SetACOutput($fossibotID, false);        // AC aus
+FBT_SetDCOutput($fossibotID, true);         // DC an für Router
+FBT_SetUSBOutput($fossibotID, false);       // USB aus
+FBT_SetMaxChargingCurrent($fossibotID, 1);  // Eco-Laden
 
 // Stromausfall-Reaktion: Alles an, maximales Laden  
-FBT_SetACOutput($fossibotID, true, false);         // AC sofort an
-FBT_SetDCOutput($fossibotID, true, false);         // DC sofort an
-FBT_SetUSBOutput($fossibotID, true, false);        // USB sofort an
-FBT_SetMaxChargingCurrent($fossibotID, 5, true);   // Max-Ladung (mit finalem Update)
+FBT_SetACOutput($fossibotID, true);         // AC an
+FBT_SetDCOutput($fossibotID, true);         // DC an
+FBT_SetUSBOutput($fossibotID, true);        // USB an
+FBT_SetMaxChargingCurrent($fossibotID, 5);  // Max-Ladung
 ```
 
 ### Debugging & Wartung
