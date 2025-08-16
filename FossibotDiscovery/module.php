@@ -49,8 +49,8 @@ class FossibotDiscovery extends IPSModuleStrict
             $configuratorElement = [
                 "type" => "Configurator",
                 "name" => "DeviceConfigurator", 
-                "caption" => "Gefundene Geräte",
-                "rowCount" => min(count($discoveredDevices), 10),
+                "caption" => "Gefundene Fossibot-Geräte",
+                "rowCount" => min(count($discoveredDevices), 8),
                 "add" => false,
                 "delete" => false,
                 "sort" => [
@@ -59,7 +59,7 @@ class FossibotDiscovery extends IPSModuleStrict
                 ],
                 "columns" => [
                     [
-                        "caption" => "Name",
+                        "caption" => "Gerätename",
                         "name" => "name", 
                         "width" => "200px",
                         "add" => ""
@@ -67,13 +67,13 @@ class FossibotDiscovery extends IPSModuleStrict
                     [
                         "caption" => "Geräte-ID",
                         "name" => "deviceId",
-                        "width" => "150px", 
+                        "width" => "200px", 
                         "add" => ""
                     ],
                     [
                         "caption" => "Status",
                         "name" => "instanceID",
-                        "width" => "150px",
+                        "width" => "120px",
                         "add" => 0
                     ]
                 ],

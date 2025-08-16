@@ -1,34 +1,26 @@
 {
     "elements": [
         {
-            "type": "Label",
-            "caption": "Fossibot Geräte-Konfigurator"
-        },
-        {
-            "type": "ValidationTextBox",
-            "name": "Email",
-            "caption": "E-Mail-Adresse"
-        },
-        {
-            "type": "PasswordTextBox",
-            "name": "Password",
-            "caption": "Passwort"
-        },
-        {
-            "type": "Label",
-            "caption": "1. Zugangsdaten eingeben und speichern"
-        },
-        {
-            "type": "Label",
-            "caption": "2. 'Geräte suchen' klicken"
-        },
-        {
-            "type": "Label",
-            "caption": "3. Für jedes Gerät manuell eine 'FossibotDevice' Instanz erstellen"
-        },
-        {
-            "type": "Label",
-            "caption": "4. In der Device-Instanz die gefundene Geräte-ID eintragen"
+            "type": "ExpansionPanel",
+            "caption": "Fossibot Account-Konfiguration",
+            "expanded": true,
+            "items": [
+                {
+                    "type": "ValidationTextBox",
+                    "name": "Email",
+                    "caption": "E-Mail-Adresse"
+                },
+                {
+                    "type": "PasswordTextBox",
+                    "name": "Password",
+                    "caption": "Passwort"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Geben Sie Ihre Fossibot-Zugangsdaten ein und klicken Sie 'Geräte suchen'.",
+                    "italic": true
+                }
+            ]
         }
     ],
     "actions": [
