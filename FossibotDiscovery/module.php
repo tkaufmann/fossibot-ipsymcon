@@ -46,6 +46,7 @@ class FossibotDiscovery extends IPSModuleStrict
             "type" => "Configurator",
             "name" => "DeviceConfigurator",
             "caption" => "Gefundene Fossibot-Geräte",
+            "discoveryFunction" => "FBD_DiscoverDevices",
             "rowCount" => 10,
             "add" => false,
             "delete" => false,
@@ -118,20 +119,6 @@ class FossibotDiscovery extends IPSModuleStrict
         return 0;
     }
 
-    /**
-     * RequestAction Handler für Button-Aktionen
-     */
-    public function RequestAction(string $Ident, mixed $Value): void
-    {
-        switch ($Ident) {
-            case 'DiscoverDevices':
-                $this->FBD_DiscoverDevices();
-                break;
-            default:
-                parent::RequestAction($Ident, $Value);
-                break;
-        }
-    }
 
     /**
      * Fossibot Client initialisieren (wiederverwendbar)
