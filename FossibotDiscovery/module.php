@@ -152,11 +152,36 @@ class FossibotDiscovery extends IPSModuleStrict
                 ];
             }
 
+            // Cache speichern
+            $this->saveDeviceCache($configuratorDevices);
+
             return $configuratorDevices;
 
         } catch (Exception $e) {
             $this->LogMessage('Fehler beim Laden der Geräteliste: ' . $e->getMessage(), KL_ERROR);
             return [];
+        }
+    }
+
+    /**
+     * Geräte-Cache in IPSymcon Variable speichern
+     */
+    private function saveDeviceCache(array $configuratorDevices): void
+    {
+        try {
+            // Sicherstellen dass DeviceCache Variable existiert
+            $cacheID = @$this->GetIDForIdent('DeviceCache');
+            if ($cacheID === false) {
+                $this->RegisterVariableString('DeviceCache', 'Geräte-Cache', '', 3);
+                $this->LogMessage('📝 DeviceCache Variable wurde erstellt', KL_NOTIFY);
+            }
+            
+            $cacheData = json_encode($configuratorDevices);
+            $this->LogMessage('💾 Speichere Cache-Daten: ' . strlen($cacheData) . ' Zeichen', KL_NOTIFY);
+            $this->SetValue('DeviceCache', $cacheData);
+            $this->LogMessage('✅ Cache-Daten gespeichert', KL_NOTIFY);
+        } catch (Exception $e) {
+            $this->LogMessage('Fehler beim Speichern des Caches: ' . $e->getMessage(), KL_ERROR);
         }
     }
 
@@ -341,18 +366,8 @@ class FossibotDiscovery extends IPSModuleStrict
             $this->SetValue('DeviceCount', count($deviceIds));
             $this->SetValue('LastDiscovery', date('d.m.Y H:i:s'));
             
-            // Sicherstellen dass DeviceCache Variable existiert
-            $cacheID = @$this->GetIDForIdent('DeviceCache');
-            if ($cacheID === false) {
-                // Variable noch nicht registriert, erstelle sie
-                $this->RegisterVariableString('DeviceCache', 'Geräte-Cache', '', 3);
-                $this->LogMessage('📝 DeviceCache Variable wurde erstellt', KL_NOTIFY);
-            }
-            
-            $cacheData = json_encode($configuratorDevices);
-            $this->LogMessage('💾 Speichere Cache-Daten: ' . strlen($cacheData) . ' Zeichen', KL_NOTIFY);
-            $this->SetValue('DeviceCache', $cacheData);
-            $this->LogMessage('✅ Cache-Daten gespeichert', KL_NOTIFY);
+            // Cache speichern mit der zentralen Funktion
+            $this->saveDeviceCache($configuratorDevices);
 
             return true;
 
