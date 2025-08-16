@@ -340,6 +340,13 @@ class FossibotDiscovery extends IPSModuleStrict
             
             $this->SetValue('DeviceCount', count($deviceIds));
             $this->SetValue('LastDiscovery', date('d.m.Y H:i:s'));
+            
+            // Sicherstellen dass DeviceCache Variable existiert
+            $cacheID = @$this->GetIDForIdent('DeviceCache');
+            if ($cacheID === false) {
+                // Variable noch nicht registriert, erstelle sie
+                $this->RegisterVariableString('DeviceCache', 'Geräte-Cache', '', 3);
+            }
             $this->SetValue('DeviceCache', json_encode($configuratorDevices));
 
             return true;
