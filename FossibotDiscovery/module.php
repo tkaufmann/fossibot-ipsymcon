@@ -46,12 +46,12 @@ class FossibotDiscovery extends IPSModuleStrict
         $discoveredDevices = [];
         
         try {
-            $lastDiscoveryID = @$this->GetIDForIdent('LastDiscovery');
-            if ($lastDiscoveryID !== false) {
-                $lastDiscovery = GetValue($lastDiscoveryID);
-                if (!empty($lastDiscovery)) {
-                    // Nur wenn schon eine Suche stattgefunden hat, lade die Geräte
-                    $discoveredDevices = $this->getDiscoveredDevices();
+            $foundDevicesID = @$this->GetIDForIdent('FoundDevices');
+            if ($foundDevicesID !== false) {
+                $foundDevicesCount = GetValue($foundDevicesID);
+                if ($foundDevicesCount > 0) {
+                    // Geräte wurden gefunden, lade sie direkt ohne doppelte Prüfung
+                    $discoveredDevices = $this->buildConfiguratorDevices();
                 }
             }
         } catch (Exception $e) {
@@ -102,7 +102,49 @@ class FossibotDiscovery extends IPSModuleStrict
     }
     
     /**
-     * Gefundene Geräte für Configurator aufbereiten
+     * Configurator-Devices direkt aus API bauen (für GetConfigurationForm)
+     */
+    private function buildConfiguratorDevices(): array
+    {
+        try {
+            $client = $this->getClient();
+            $devices = $client->getDevices();
+            
+            if (empty($devices)) {
+                return [];
+            }
+            
+            $configuratorDevices = [];
+            foreach ($devices as $deviceId => $device) {
+                $cleanDeviceId = str_replace(':', '', $device['device_id'] ?? $deviceId);
+                $deviceName = $device['device_name'] ?? $device['deviceName'] ?? 'Unbekanntes Gerät';
+                
+                $instanceID = $this->findExistingInstance($cleanDeviceId);
+                
+                $configuratorDevices[] = [
+                    "name" => $deviceName,
+                    "deviceId" => $cleanDeviceId,
+                    "instanceID" => $instanceID,
+                    "create" => [
+                        "moduleID" => "{58C595CB-5ABE-95CA-C1BC-26C5DBA45460}",
+                        "configuration" => [
+                            "DeviceID" => $cleanDeviceId,
+                            "DeviceName" => $deviceName
+                        ]
+                    ]
+                ];
+            }
+            
+            return $configuratorDevices;
+            
+        } catch (Exception $e) {
+            $this->LogMessage('Fehler beim Laden der Geräteliste: ' . $e->getMessage(), KL_ERROR);
+            return [];
+        }
+    }
+
+    /**
+     * Gefundene Geräte für Configurator aufbereiten (Legacy - für FBD_DiscoverDevices)
      */
     private function getDiscoveredDevices(): array
     {
