@@ -1,7 +1,7 @@
 {
     "id": "{A67EA473-8B4A-0901-E134-21F1363D9036}",
     "name": "FossibotDiscovery",
-    "type": 4,
+    "type": 5,
     "vendor": "Fossibot",
     "aliases": ["Fossibot Discovery", "Fossibot Device Discovery"],
     "url": "https://github.com/tkaufmann/fossibot-ipsymcon",

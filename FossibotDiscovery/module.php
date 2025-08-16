@@ -4,7 +4,7 @@
  * ABOUTME: Fossibot Discovery Modul für IP-Symcon
  * ABOUTME: Ermöglicht die Suche und Konfiguration von Fossibot Geräten
  */
-class FossibotDiscovery extends IPSModule
+class FossibotDiscovery extends IPSModuleStrict
 {
     private $client = null;
     
