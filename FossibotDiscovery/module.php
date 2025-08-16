@@ -186,6 +186,44 @@ class FossibotDiscovery extends IPSModuleStrict
     }
 
     /**
+     * InstanceID für ein gecachetes Gerät aktualisieren
+     */
+    private function updateCachedDeviceInstance(string $deviceId, int $instanceID): void
+    {
+        try {
+            $cacheID = @$this->GetIDForIdent('DeviceCache');
+            if ($cacheID === false) {
+                return; // Kein Cache vorhanden
+            }
+            
+            $cachedData = GetValue($cacheID);
+            if (empty($cachedData)) {
+                return; // Cache leer
+            }
+            
+            $devices = json_decode($cachedData, true);
+            if ($devices === null) {
+                return; // JSON decode failed
+            }
+            
+            // Gerät finden und instanceID aktualisieren
+            foreach ($devices as &$device) {
+                if ($device['deviceId'] === $deviceId) {
+                    $device['instanceID'] = $instanceID;
+                    $this->LogMessage("🔄 Cache aktualisiert: {$device['name']} -> Instanz {$instanceID}", KL_NOTIFY);
+                    break;
+                }
+            }
+            
+            // Aktualisierten Cache speichern
+            $this->SetValue('DeviceCache', json_encode($devices));
+            
+        } catch (Exception $e) {
+            $this->LogMessage('Fehler beim Aktualisieren des Caches: ' . $e->getMessage(), KL_ERROR);
+        }
+    }
+
+    /**
      * Gefundene Geräte für Configurator aufbereiten (Legacy - für FBD_DiscoverDevices)
      */
     private function getDiscoveredDevices(): array
@@ -404,6 +442,10 @@ class FossibotDiscovery extends IPSModuleStrict
             IPS_ApplyChanges($instanceID);
 
             $this->LogMessage('Instanz erstellt für: ' . $deviceName . ' (ID: ' . $instanceID . ')', KL_NOTIFY);
+            
+            // Cache aktualisieren: instanceID für dieses Gerät setzen
+            $this->updateCachedDeviceInstance($deviceId, $instanceID);
+            
             return $instanceID;
         }
 
