@@ -1022,4 +1022,68 @@ class FossibotDevice extends IPSModuleStrict
             'password' => $password
         ];
     }
+
+    // ===== FBT_ WRAPPER FUNCTIONS =====
+    // Diese Funktionen werden vom RequestAction System aufgerufen
+    // und leiten an die neuen Funktionen ohne FBT_ Prefix weiter
+
+    public function FBT_SetACOutput(bool $enabled): bool
+    {
+        return $this->SetACOutput($enabled);
+    }
+
+    public function FBT_SetDCOutput(bool $enabled): bool
+    {
+        return $this->SetDCOutput($enabled);
+    }
+
+    public function FBT_SetUSBOutput(bool $enabled): bool
+    {
+        return $this->SetUSBOutput($enabled);
+    }
+
+    public function FBT_SetMaxChargingCurrent(int $ampere): bool
+    {
+        return $this->SetMaxChargingCurrent($ampere);
+    }
+
+    public function FBT_SetChargingLimit(int $percent): bool
+    {
+        return $this->SetChargingLimit($percent);
+    }
+
+    public function FBT_SetDischargeLimit(int $percent): bool
+    {
+        return $this->SetDischargeLimit($percent);
+    }
+
+    public function FBT_SetChargeTimer(int $minutes): bool
+    {
+        return $this->SetChargeTimer($minutes);
+    }
+
+    public function FBT_UpdateDeviceStatus(): bool
+    {
+        return $this->UpdateDeviceStatus();
+    }
+
+    public function FBT_RequestSettings(): bool
+    {
+        return $this->RequestSettings();
+    }
+
+    public function FBT_GetDeviceInfo(): string
+    {
+        return $this->GetDeviceInfo();
+    }
+
+    public function FBT_ClearDeviceCache(): bool
+    {
+        return $this->ClearDeviceCache();
+    }
+
+    public function FBT_ClearTokenCache(): bool
+    {
+        return $this->ClearTokenCache();
+    }
 }
