@@ -88,7 +88,7 @@ class FossibotDiscovery extends IPSModuleStrict
                     [
                         "caption" => "Status",
                         "name" => "instanceID",
-                        "width" => "auto",
+                        "width" => "120px",
                         "add" => 0
                     ]
                 ],
