@@ -19,6 +19,7 @@ class FossibotDiscovery extends IPSModuleStrict
         // Status-Variable
         $this->RegisterVariableString('LastDiscovery', 'Letzte Suche', '', 1);
         $this->RegisterVariableInteger('DeviceCount', 'Gefundene Geräte', '', 2);
+        $this->RegisterVariableString('ConfiguratorData', 'Configurator-Cache', '', 3);
     }
 
     public function ApplyChanges(): void
@@ -41,12 +42,30 @@ class FossibotDiscovery extends IPSModuleStrict
         // Basis-Form laden - SCHNELL, keine API-Calls!
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
 
+        // Configurator-Daten aus Variable laden
+        $configuratorValues = [];
+        try {
+            $deviceCountID = @$this->GetIDForIdent('DeviceCount');
+            if ($deviceCountID !== false && GetValue($deviceCountID) > 0) {
+                // Versuche gecachte Configurator-Daten zu laden
+                $cachedDataID = @$this->GetIDForIdent('ConfiguratorData');
+                if ($cachedDataID !== false) {
+                    $cachedData = GetValue($cachedDataID);
+                    if (!empty($cachedData)) {
+                        $configuratorValues = json_decode($cachedData, true) ?? [];
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            // Ignoriere Fehler
+        }
+
         // Standard IPSymcon Configurator hinzufügen
         $configuratorElement = [
             "type" => "Configurator",
             "name" => "DeviceConfigurator",
             "caption" => "Gefundene Fossibot-Geräte",
-            "discoveryFunction" => "FBD_DiscoverDevices",
+            "values" => $configuratorValues,
             "rowCount" => 10,
             "add" => false,
             "delete" => false,
@@ -119,6 +138,22 @@ class FossibotDiscovery extends IPSModuleStrict
         return 0;
     }
 
+    /**
+     * RequestAction Handler für Button-Aktionen
+     */
+    public function RequestAction(string $Ident, mixed $Value): void
+    {
+        switch ($Ident) {
+            case 'DiscoverDevices':
+                $devices = $this->FBD_DiscoverDevices();
+                // Konfigurationsformular neu laden um Configurator zu aktualisieren
+                $this->UpdateFormField('DeviceConfigurator', 'values', $devices);
+                break;
+            default:
+                parent::RequestAction($Ident, $Value);
+                break;
+        }
+    }
 
     /**
      * Fossibot Client initialisieren (wiederverwendbar)
@@ -196,6 +231,9 @@ class FossibotDiscovery extends IPSModuleStrict
             // Status-Variablen setzen
             $this->SetValue('DeviceCount', count($deviceIds));
             $this->SetValue('LastDiscovery', date('d.m.Y H:i:s'));
+            
+            // Configurator-Daten in Variable speichern
+            $this->SetValue('ConfiguratorData', json_encode($configuratorDevices));
 
             $this->LogMessage(sprintf('🎯 %d Geräte gefunden, Tabelle wird angezeigt', count($deviceIds)), KL_NOTIFY);
 
