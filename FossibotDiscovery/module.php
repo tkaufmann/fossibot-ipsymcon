@@ -41,8 +41,14 @@ class FossibotDiscovery extends IPSModuleStrict
         // Basis-Form laden
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
         
-        // Gefundene Geräte als Configurator-Liste hinzufügen
-        $discoveredDevices = $this->getDiscoveredDevices();
+        // Nur Geräte anzeigen, wenn explizit gesucht wurde (LastDiscovery ist gesetzt)
+        $lastDiscovery = GetValue($this->GetIDForIdent('LastDiscovery'));
+        $discoveredDevices = [];
+        
+        if (!empty($lastDiscovery)) {
+            // Nur wenn schon eine Suche stattgefunden hat, lade die Geräte
+            $discoveredDevices = $this->getDiscoveredDevices();
+        }
         
         if (!empty($discoveredDevices)) {
             // Configurator-Element für gefundene Geräte hinzufügen
