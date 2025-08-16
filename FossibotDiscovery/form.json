@@ -26,6 +26,11 @@
     "actions": [
         {
             "type": "Button",
+            "caption": "Übernehmen",
+            "onClick": "IPS_ApplyChanges($id);"
+        },
+        {
+            "type": "Button", 
             "caption": "Geräte suchen",
             "onClick": "IPS_RequestAction($id, 'DiscoverDevices', true);"
         }
