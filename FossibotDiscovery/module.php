@@ -38,110 +38,33 @@ class FossibotDiscovery extends IPSModuleStrict
      */
     public function GetConfigurationForm(): string
     {
-        // Basis-Form laden
+        // Basis-Form laden - SCHNELL, keine API-Calls!
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
 
-        // Configurator nur anzeigen wenn explizit nach Geräten gesucht wurde
-        $discoveredDevices = [];
-
+        // Status-Info hinzufügen falls verfügbar
         try {
             $deviceCountID = @$this->GetIDForIdent('DeviceCount');
             if ($deviceCountID !== false) {
                 $deviceCount = GetValue($deviceCountID);
                 if ($deviceCount > 0) {
-                    // Geräte wurden gefunden - frische Liste mit aktuellen Instance-IDs erstellen
-                    $discoveredDevices = $this->buildConfiguratorDevices();
+                    // Zeige Info über gefundene Geräte
+                    $lastDiscoveryID = @$this->GetIDForIdent('LastDiscovery');
+                    $lastDiscovery = $lastDiscoveryID !== false ? GetValue($lastDiscoveryID) : 'Unbekannt';
+                    
+                    $infoElement = [
+                        "type" => "Label",
+                        "caption" => "✅ {$deviceCount} Geräte gefunden am {$lastDiscovery}. Instanzen wurden automatisch erstellt."
+                    ];
+                    $form["elements"][] = $infoElement;
                 }
             }
         } catch (Exception $e) {
-            // Bei Fehlern keine Geräte anzeigen
-            $discoveredDevices = [];
-        }
-
-        if (!empty($discoveredDevices)) {
-            // Configurator-Element für gefundene Geräte hinzufügen
-            $configuratorElement = [
-                "type" => "Configurator",
-                "name" => "DeviceConfigurator",
-                "caption" => "Gefundene Fossibot-Geräte",
-                "rowCount" => min(count($discoveredDevices), 8),
-                "add" => false,
-                "delete" => false,
-                "sort" => [
-                    "column" => "name",
-                    "direction" => "ascending"
-                ],
-                "columns" => [
-                    [
-                        "caption" => "Gerätename",
-                        "name" => "name",
-                        "width" => "250px",
-                        "add" => ""
-                    ],
-                    [
-                        "caption" => "Geräte-ID",
-                        "name" => "deviceId",
-                        "width" => "200px",
-                        "add" => ""
-                    ],
-                    [
-                        "caption" => "Status",
-                        "name" => "instanceID",
-                        "width" => "auto",
-                        "add" => 0
-                    ]
-                ],
-                "values" => $discoveredDevices
-            ];
-
-            $form["elements"][] = $configuratorElement;
+            // Ignoriere Fehler - Dialog soll trotzdem schnell öffnen
         }
 
         return json_encode($form);
     }
 
-    /**
-     * Configurator-Devices direkt aus API bauen mit aktuellen Instance-IDs
-     */
-    private function buildConfiguratorDevices(): array
-    {
-        try {
-            $client = $this->getClient();
-            $devices = $client->getDevices();
-
-            if (empty($devices)) {
-                return [];
-            }
-
-            $configuratorDevices = [];
-            foreach ($devices as $deviceId => $device) {
-                $cleanDeviceId = str_replace(':', '', $device['device_id'] ?? $deviceId);
-                $deviceName = $device['device_name'] ?? $device['deviceName'] ?? 'Unbekanntes Gerät';
-
-                // Aktuelle Instance-ID ermitteln (immer frisch)
-                $instanceID = $this->findExistingInstance($cleanDeviceId);
-
-                $configuratorDevices[] = [
-                    "name" => $deviceName,
-                    "deviceId" => $cleanDeviceId,
-                    "instanceID" => $instanceID,
-                    "create" => [
-                        "moduleID" => "{58C595CB-5ABE-95CA-C1BC-26C5DBA45460}",
-                        "configuration" => [
-                            "DeviceID" => $cleanDeviceId
-                        ],
-                        "name" => $deviceName
-                    ]
-                ];
-            }
-
-            return $configuratorDevices;
-
-        } catch (Exception $e) {
-            $this->LogMessage('Fehler beim Laden der Geräteliste: ' . $e->getMessage(), KL_ERROR);
-            return [];
-        }
-    }
 
 
     /**
@@ -195,7 +118,7 @@ class FossibotDiscovery extends IPSModuleStrict
     }
 
     /**
-     * Geräte suchen und konfigurieren
+     * Geräte suchen und automatisch Instanzen erstellen
      */
     public function FBD_DiscoverDevices(): bool
     {
@@ -220,17 +143,47 @@ class FossibotDiscovery extends IPSModuleStrict
             $devices = $client->getDevices();
             $deviceIds = $client->getDeviceIds();
 
-            $this->LogMessage(sprintf('Gefunden: %d Geräte', count($deviceIds)), KL_NOTIFY);
+            $this->LogMessage(sprintf('🔍 Gefunden: %d Geräte', count($deviceIds)), KL_NOTIFY);
 
-            // Geräte-Details ins Log schreiben
-            foreach ($deviceIds as $i => $deviceId) {
-                $deviceName = $devices[$i]['deviceName'] ?? 'Unbekannt';
-                $this->LogMessage(sprintf('📱 Gerät %d: %s', $i+1, $deviceName), KL_NOTIFY);
-                $this->LogMessage(sprintf('🔑 Geräte-ID: %s', $deviceId), KL_NOTIFY);
+            // Zähler für automatisch erstellte Instanzen
+            $createdInstances = 0;
+            $existingInstances = 0;
+
+            // Für jedes Gerät automatisch Instanz erstellen
+            foreach ($devices as $deviceId => $device) {
+                $cleanDeviceId = str_replace(':', '', $device['device_id'] ?? $deviceId);
+                $deviceName = $device['device_name'] ?? $device['deviceName'] ?? 'Unbekanntes Gerät';
+                
+                $this->LogMessage(sprintf('📱 Verarbeite: %s (ID: %s)', $deviceName, $cleanDeviceId), KL_NOTIFY);
+
+                // Prüfen ob bereits eine Instanz existiert
+                $existingInstance = $this->findExistingInstance($cleanDeviceId);
+                if ($existingInstance > 0) {
+                    $this->LogMessage("✅ Instanz bereits vorhanden (ID: {$existingInstance})", KL_NOTIFY);
+                    $existingInstances++;
+                } else {
+                    // Neue Instanz erstellen
+                    $instanceID = $this->FBD_CreateDeviceInstance($cleanDeviceId, $deviceName);
+                    if ($instanceID > 0) {
+                        $this->LogMessage("🆕 Neue Instanz erstellt (ID: {$instanceID})", KL_NOTIFY);
+                        $createdInstances++;
+                    } else {
+                        $this->LogMessage("❌ Fehler beim Erstellen der Instanz für {$deviceName}", KL_ERROR);
+                    }
+                }
             }
             
+            // Status-Variablen setzen
             $this->SetValue('DeviceCount', count($deviceIds));
             $this->SetValue('LastDiscovery', date('d.m.Y H:i:s'));
+
+            // Zusammenfassung ins Log
+            $this->LogMessage(sprintf('🎯 Zusammenfassung: %d Geräte gefunden, %d neue Instanzen erstellt, %d bereits vorhanden', 
+                count($deviceIds), $createdInstances, $existingInstances), KL_NOTIFY);
+
+            if ($createdInstances > 0) {
+                $this->LogMessage('✨ Neue Instanzen sind im Objektbaum verfügbar!', KL_NOTIFY);
+            }
 
             return true;
 
