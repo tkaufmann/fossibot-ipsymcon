@@ -191,32 +191,49 @@ class FossibotDiscovery extends IPSModuleStrict
     private function updateCachedDeviceInstance(string $deviceId, int $instanceID): void
     {
         try {
+            $this->LogMessage("🔄 Versuche Cache-Update für Gerät: {$deviceId} -> Instanz {$instanceID}", KL_NOTIFY);
+            
             $cacheID = @$this->GetIDForIdent('DeviceCache');
             if ($cacheID === false) {
-                return; // Kein Cache vorhanden
+                $this->LogMessage('❌ DeviceCache Variable nicht gefunden', KL_WARNING);
+                return;
             }
             
             $cachedData = GetValue($cacheID);
             if (empty($cachedData)) {
-                return; // Cache leer
+                $this->LogMessage('❌ Cache ist leer', KL_WARNING);
+                return;
             }
             
             $devices = json_decode($cachedData, true);
             if ($devices === null) {
-                return; // JSON decode failed
+                $this->LogMessage('❌ JSON decode fehlgeschlagen', KL_ERROR);
+                return;
             }
             
+            $this->LogMessage('📊 Cache enthält ' . count($devices) . ' Geräte', KL_DEBUG);
+            
             // Gerät finden und instanceID aktualisieren
+            $found = false;
             foreach ($devices as &$device) {
                 if ($device['deviceId'] === $deviceId) {
+                    $oldInstanceID = $device['instanceID'] ?? 0;
                     $device['instanceID'] = $instanceID;
-                    $this->LogMessage("🔄 Cache aktualisiert: {$device['name']} -> Instanz {$instanceID}", KL_NOTIFY);
+                    $this->LogMessage("✅ Cache aktualisiert: {$device['name']} -> Instanz {$oldInstanceID} → {$instanceID}", KL_NOTIFY);
+                    $found = true;
                     break;
                 }
             }
             
+            if (!$found) {
+                $this->LogMessage("❌ Gerät {$deviceId} nicht im Cache gefunden", KL_WARNING);
+                return;
+            }
+            
             // Aktualisierten Cache speichern
-            $this->SetValue('DeviceCache', json_encode($devices));
+            $newCacheData = json_encode($devices);
+            $this->SetValue('DeviceCache', $newCacheData);
+            $this->LogMessage('💾 Cache erfolgreich aktualisiert', KL_NOTIFY);
             
         } catch (Exception $e) {
             $this->LogMessage('Fehler beim Aktualisieren des Caches: ' . $e->getMessage(), KL_ERROR);
@@ -442,6 +459,9 @@ class FossibotDiscovery extends IPSModuleStrict
             IPS_ApplyChanges($instanceID);
 
             $this->LogMessage('Instanz erstellt für: ' . $deviceName . ' (ID: ' . $instanceID . ')', KL_NOTIFY);
+            
+            // Kurz warten damit die Instanz vollständig initialisiert ist
+            usleep(100000); // 100ms
             
             // Cache aktualisieren: instanceID für dieses Gerät setzen
             $this->updateCachedDeviceInstance($deviceId, $instanceID);
