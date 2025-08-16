@@ -214,8 +214,18 @@ class FossibotDiscovery extends IPSModuleStrict
             IPS_SetProperty($instanceID, 'DeviceID', $deviceId);
 
             // Zugangsdaten an Device-Instanz weitergeben
-            IPS_SetProperty($instanceID, 'Email', $this->ReadPropertyString('Email'));
-            IPS_SetProperty($instanceID, 'Password', $this->ReadPropertyString('Password'));
+            try {
+                $email = $this->ReadPropertyString('Email');
+                $password = $this->ReadPropertyString('Password');
+                
+                $this->LogMessage("Debug: Email='{$email}' Password='".str_repeat('*', strlen($password))."'", KL_DEBUG);
+                
+                IPS_SetProperty($instanceID, 'Email', $email);
+                IPS_SetProperty($instanceID, 'Password', $password);
+            } catch (Exception $e) {
+                $this->LogMessage('Fehler beim Lesen der Properties: ' . $e->getMessage(), KL_ERROR);
+                throw $e;
+            }
 
             IPS_ApplyChanges($instanceID);
 
