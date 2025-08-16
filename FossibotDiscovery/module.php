@@ -7,6 +7,7 @@
 class FossibotDiscovery extends IPSModuleStrict
 {
     private $client = null;
+    private $cachedDevices = null;
     
     public function Create(): void
     {
@@ -41,13 +42,18 @@ class FossibotDiscovery extends IPSModuleStrict
         // Basis-Form laden
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
         
-        // Nur Geräte anzeigen, wenn explizit gesucht wurde (LastDiscovery ist gesetzt)
-        $lastDiscovery = GetValue($this->GetIDForIdent('LastDiscovery'));
+        // Nur Geräte anzeigen, wenn explizit gesucht wurde
         $discoveredDevices = [];
         
-        if (!empty($lastDiscovery)) {
-            // Nur wenn schon eine Suche stattgefunden hat, lade die Geräte
-            $discoveredDevices = $this->getDiscoveredDevices();
+        try {
+            $lastDiscovery = GetValue($this->GetIDForIdent('LastDiscovery'));
+            if (!empty($lastDiscovery)) {
+                // Nur wenn schon eine Suche stattgefunden hat, lade die Geräte
+                $discoveredDevices = $this->getDiscoveredDevices();
+            }
+        } catch (Exception $e) {
+            // Wenn Variable nicht existiert oder anderer Fehler - keine Geräte laden
+            $discoveredDevices = [];
         }
         
         if (!empty($discoveredDevices)) {
@@ -67,19 +73,19 @@ class FossibotDiscovery extends IPSModuleStrict
                     [
                         "caption" => "Gerätename",
                         "name" => "name", 
-                        "width" => "auto",
+                        "width" => "250px",
                         "add" => ""
                     ],
                     [
                         "caption" => "Geräte-ID",
                         "name" => "deviceId",
-                        "width" => "auto", 
+                        "width" => "200px", 
                         "add" => ""
                     ],
                     [
                         "caption" => "Status",
                         "name" => "instanceID",
-                        "width" => "auto",
+                        "width" => "120px",
                         "add" => 0
                     ]
                 ],
@@ -97,6 +103,22 @@ class FossibotDiscovery extends IPSModuleStrict
      */
     private function getDiscoveredDevices(): array
     {
+        // Verwende gecachte Daten wenn verfügbar (für GetConfigurationForm)
+        if ($this->cachedDevices !== null) {
+            return $this->cachedDevices;
+        }
+        
+        // Prüfe ob überhaupt Geräte gefunden wurden
+        try {
+            $foundDevicesCount = GetValue($this->GetIDForIdent('FoundDevices'));
+            if ($foundDevicesCount == 0) {
+                return [];
+            }
+        } catch (Exception $e) {
+            return [];
+        }
+        
+        // API-Aufruf nur wenn nicht gecacht
         try {
             $client = $this->getClient();
             $devices = $client->getDevices();
@@ -128,6 +150,9 @@ class FossibotDiscovery extends IPSModuleStrict
                     ]
                 ];
             }
+            
+            // Cache für nachfolgende GetConfigurationForm-Aufrufe
+            $this->cachedDevices = $configuratorDevices;
             
             return $configuratorDevices;
             
@@ -192,6 +217,9 @@ class FossibotDiscovery extends IPSModuleStrict
      */
     public function FBD_DiscoverDevices(): bool
     {
+        // Cache leeren für neue Suche
+        $this->cachedDevices = null;
+        
         try {
             $client = $this->getClient();
             
