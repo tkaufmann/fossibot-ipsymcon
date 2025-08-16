@@ -100,7 +100,7 @@ class FossibotDevice extends IPSModuleStrict
         if ($lastDeviceId === null || $lastDeviceId !== $deviceId) {
             $lastDeviceId = $deviceId;
             // Erste Aktualisierung
-            $this->FBT_UpdateDeviceStatus();
+            $this->UpdateDeviceStatus();
         }
     }
 
@@ -111,7 +111,7 @@ class FossibotDevice extends IPSModuleStrict
     {
         switch ($Ident) {
             case 'RefreshNow':
-                $this->FBT_UpdateDeviceStatus();
+                $this->UpdateDeviceStatus();
                 break;
             case 'GetDeviceInfo':
                 $info = $this->FBT_GetDeviceInfo();
@@ -120,7 +120,7 @@ class FossibotDevice extends IPSModuleStrict
             case 'TimerUpdate':
                 $this->LogMessage('Keep-Alive Timer-Update ausgeführt', KL_DEBUG);
                 // Keep-Alive Update: Verhindert dass F2400 in Schlafmodus geht
-                $this->FBT_UpdateDeviceStatus();
+                $this->UpdateDeviceStatus();
                 break;
             case 'SetACOutput':
                 $this->FBT_SetACOutput($Value);
