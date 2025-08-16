@@ -152,13 +152,16 @@ class FossibotDiscovery extends IPSModuleStrict
                 ];
             }
 
-            // Cache speichern
-            $this->saveDeviceCache($configuratorDevices);
+            // Cache nur speichern wenn Geräte gefunden wurden
+            if (!empty($configuratorDevices)) {
+                $this->saveDeviceCache($configuratorDevices);
+            }
 
             return $configuratorDevices;
 
         } catch (Exception $e) {
             $this->LogMessage('Fehler beim Laden der Geräteliste: ' . $e->getMessage(), KL_ERROR);
+            // WICHTIG: Cache NICHT überschreiben bei Fehlern!
             return [];
         }
     }
