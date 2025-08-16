@@ -145,9 +145,9 @@ class FossibotDiscovery extends IPSModuleStrict
     {
         switch ($Ident) {
             case 'DiscoverDevices':
-                $devices = $this->FBD_DiscoverDevices();
-                // Konfigurationsformular neu laden um Configurator zu aktualisieren
-                $this->UpdateFormField('DeviceConfigurator', 'values', $devices);
+                $this->FBD_DiscoverDevices();
+                // Die Daten sind jetzt in ConfiguratorData gespeichert
+                // IPSymcon wird das Formular neu laden und die neuen Daten anzeigen
                 break;
             default:
                 parent::RequestAction($Ident, $Value);
