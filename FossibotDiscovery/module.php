@@ -20,6 +20,7 @@ class FossibotDiscovery extends IPSModuleStrict
         // Status-Variable
         $this->RegisterVariableString('LastDiscovery', 'Letzte Suche', '', 1);
         $this->RegisterVariableInteger('DeviceCount', 'Gefundene Geräte', '', 2);
+        $this->RegisterVariableString('DeviceCache', 'Geräte-Cache', '', 3);
     }
 
     public function ApplyChanges(): void
@@ -50,8 +51,24 @@ class FossibotDiscovery extends IPSModuleStrict
             if ($deviceCountID !== false) {
                 $deviceCount = GetValue($deviceCountID);
                 if ($deviceCount > 0) {
-                    // Geräte wurden gefunden, lade sie direkt ohne doppelte Prüfung
-                    $discoveredDevices = $this->buildConfiguratorDevices();
+                    // Geräte wurden gefunden, versuche aus persistentem Cache zu laden
+                    $cacheID = @$this->GetIDForIdent('DeviceCache');
+                    if ($cacheID !== false) {
+                        $cachedData = GetValue($cacheID);
+                        if (!empty($cachedData)) {
+                            $discoveredDevices = json_decode($cachedData, true);
+                            if ($discoveredDevices === null) {
+                                // JSON decode failed, fallback zu API
+                                $discoveredDevices = $this->buildConfiguratorDevices();
+                            }
+                        } else {
+                            // Cache leer, API-Aufruf
+                            $discoveredDevices = $this->buildConfiguratorDevices();
+                        }
+                    } else {
+                        // Cache Variable nicht vorhanden, API-Aufruf
+                        $discoveredDevices = $this->buildConfiguratorDevices();
+                    }
                 }
             }
         } catch (Exception $e) {
@@ -299,8 +316,31 @@ class FossibotDiscovery extends IPSModuleStrict
                 $this->LogMessage(sprintf('🔑 Geräte-ID: %s', $deviceId), KL_NOTIFY);
             }
 
+            // Geräte-Cache für Configurator aufbauen und speichern
+            $configuratorDevices = [];
+            foreach ($devices as $deviceId => $device) {
+                $cleanDeviceId = str_replace(':', '', $device['device_id'] ?? $deviceId);
+                $deviceName = $device['device_name'] ?? 'Unbekanntes Gerät';
+                
+                $instanceID = $this->findExistingInstance($cleanDeviceId);
+                
+                $configuratorDevices[] = [
+                    "name" => $deviceName,
+                    "deviceId" => $cleanDeviceId,
+                    "instanceID" => $instanceID,
+                    "create" => [
+                        "moduleID" => "{58C595CB-5ABE-95CA-C1BC-26C5DBA45460}",
+                        "configuration" => [
+                            "DeviceID" => $cleanDeviceId
+                        ],
+                        "name" => $deviceName
+                    ]
+                ];
+            }
+            
             $this->SetValue('DeviceCount', count($deviceIds));
             $this->SetValue('LastDiscovery', date('d.m.Y H:i:s'));
+            $this->SetValue('DeviceCache', json_encode($configuratorDevices));
 
             return true;
 
