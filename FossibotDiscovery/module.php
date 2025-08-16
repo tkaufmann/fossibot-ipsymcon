@@ -7,7 +7,6 @@
 class FossibotDiscovery extends IPSModuleStrict
 {
     private $client = null;
-    private $cachedDevices = null;
 
     public function Create(): void
     {
@@ -20,7 +19,6 @@ class FossibotDiscovery extends IPSModuleStrict
         // Status-Variable
         $this->RegisterVariableString('LastDiscovery', 'Letzte Suche', '', 1);
         $this->RegisterVariableInteger('DeviceCount', 'Gefundene Geräte', '', 2);
-        $this->RegisterVariableString('DeviceCache', 'Geräte-Cache', '', 3);
     }
 
     public function ApplyChanges(): void
@@ -43,7 +41,7 @@ class FossibotDiscovery extends IPSModuleStrict
         // Basis-Form laden
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
 
-        // Nur Geräte anzeigen, wenn explizit gesucht wurde
+        // Configurator nur anzeigen wenn explizit nach Geräten gesucht wurde
         $discoveredDevices = [];
 
         try {
@@ -51,28 +49,12 @@ class FossibotDiscovery extends IPSModuleStrict
             if ($deviceCountID !== false) {
                 $deviceCount = GetValue($deviceCountID);
                 if ($deviceCount > 0) {
-                    // Geräte wurden gefunden, versuche aus persistentem Cache zu laden
-                    $cacheID = @$this->GetIDForIdent('DeviceCache');
-                    if ($cacheID !== false) {
-                        $cachedData = GetValue($cacheID);
-                        if (!empty($cachedData)) {
-                            $discoveredDevices = json_decode($cachedData, true);
-                            if ($discoveredDevices === null) {
-                                // JSON decode failed, fallback zu API
-                                $discoveredDevices = $this->buildConfiguratorDevices();
-                            }
-                        } else {
-                            // Cache leer, API-Aufruf
-                            $discoveredDevices = $this->buildConfiguratorDevices();
-                        }
-                    } else {
-                        // Cache Variable nicht vorhanden, API-Aufruf
-                        $discoveredDevices = $this->buildConfiguratorDevices();
-                    }
+                    // Geräte wurden gefunden - frische Liste mit aktuellen Instance-IDs erstellen
+                    $discoveredDevices = $this->buildConfiguratorDevices();
                 }
             }
         } catch (Exception $e) {
-            // Wenn Variable nicht existiert oder anderer Fehler - keine Geräte laden
+            // Bei Fehlern keine Geräte anzeigen
             $discoveredDevices = [];
         }
 
@@ -119,7 +101,7 @@ class FossibotDiscovery extends IPSModuleStrict
     }
 
     /**
-     * Configurator-Devices direkt aus API bauen (für GetConfigurationForm)
+     * Configurator-Devices direkt aus API bauen mit aktuellen Instance-IDs
      */
     private function buildConfiguratorDevices(): array
     {
@@ -136,6 +118,7 @@ class FossibotDiscovery extends IPSModuleStrict
                 $cleanDeviceId = str_replace(':', '', $device['device_id'] ?? $deviceId);
                 $deviceName = $device['device_name'] ?? $device['deviceName'] ?? 'Unbekanntes Gerät';
 
+                // Aktuelle Instance-ID ermitteln (immer frisch)
                 $instanceID = $this->findExistingInstance($cleanDeviceId);
 
                 $configuratorDevices[] = [
@@ -152,157 +135,6 @@ class FossibotDiscovery extends IPSModuleStrict
                 ];
             }
 
-            // Cache nur speichern wenn Geräte gefunden wurden
-            if (!empty($configuratorDevices)) {
-                $this->saveDeviceCache($configuratorDevices);
-            }
-
-            return $configuratorDevices;
-
-        } catch (Exception $e) {
-            $this->LogMessage('Fehler beim Laden der Geräteliste: ' . $e->getMessage(), KL_ERROR);
-            // WICHTIG: Cache NICHT überschreiben bei Fehlern!
-            return [];
-        }
-    }
-
-    /**
-     * Geräte-Cache in IPSymcon Variable speichern
-     */
-    private function saveDeviceCache(array $configuratorDevices): void
-    {
-        try {
-            // Sicherstellen dass DeviceCache Variable existiert
-            $cacheID = @$this->GetIDForIdent('DeviceCache');
-            if ($cacheID === false) {
-                $this->RegisterVariableString('DeviceCache', 'Geräte-Cache', '', 3);
-                $this->LogMessage('📝 DeviceCache Variable wurde erstellt', KL_NOTIFY);
-            }
-            
-            $cacheData = json_encode($configuratorDevices);
-            $this->LogMessage('💾 Speichere Cache-Daten: ' . strlen($cacheData) . ' Zeichen', KL_NOTIFY);
-            $this->SetValue('DeviceCache', $cacheData);
-            $this->LogMessage('✅ Cache-Daten gespeichert', KL_NOTIFY);
-        } catch (Exception $e) {
-            $this->LogMessage('Fehler beim Speichern des Caches: ' . $e->getMessage(), KL_ERROR);
-        }
-    }
-
-    /**
-     * InstanceID für ein gecachetes Gerät aktualisieren
-     */
-    private function updateCachedDeviceInstance(string $deviceId, int $instanceID): void
-    {
-        try {
-            $this->LogMessage("🔄 Versuche Cache-Update für Gerät: {$deviceId} -> Instanz {$instanceID}", KL_NOTIFY);
-            
-            $cacheID = @$this->GetIDForIdent('DeviceCache');
-            if ($cacheID === false) {
-                $this->LogMessage('❌ DeviceCache Variable nicht gefunden', KL_WARNING);
-                return;
-            }
-            
-            $cachedData = GetValue($cacheID);
-            if (empty($cachedData)) {
-                $this->LogMessage('❌ Cache ist leer', KL_WARNING);
-                return;
-            }
-            
-            $devices = json_decode($cachedData, true);
-            if ($devices === null) {
-                $this->LogMessage('❌ JSON decode fehlgeschlagen', KL_ERROR);
-                return;
-            }
-            
-            $this->LogMessage('📊 Cache enthält ' . count($devices) . ' Geräte', KL_DEBUG);
-            
-            // Gerät finden und instanceID aktualisieren
-            $found = false;
-            foreach ($devices as &$device) {
-                if ($device['deviceId'] === $deviceId) {
-                    $oldInstanceID = $device['instanceID'] ?? 0;
-                    $device['instanceID'] = $instanceID;
-                    $this->LogMessage("✅ Cache aktualisiert: {$device['name']} -> Instanz {$oldInstanceID} → {$instanceID}", KL_NOTIFY);
-                    $found = true;
-                    break;
-                }
-            }
-            
-            if (!$found) {
-                $this->LogMessage("❌ Gerät {$deviceId} nicht im Cache gefunden", KL_WARNING);
-                return;
-            }
-            
-            // Aktualisierten Cache speichern
-            $newCacheData = json_encode($devices);
-            $this->SetValue('DeviceCache', $newCacheData);
-            $this->LogMessage('💾 Cache erfolgreich aktualisiert', KL_NOTIFY);
-            
-        } catch (Exception $e) {
-            $this->LogMessage('Fehler beim Aktualisieren des Caches: ' . $e->getMessage(), KL_ERROR);
-        }
-    }
-
-    /**
-     * Gefundene Geräte für Configurator aufbereiten (Legacy - für FBD_DiscoverDevices)
-     */
-    private function getDiscoveredDevices(): array
-    {
-        // Verwende gecachte Daten wenn verfügbar (für GetConfigurationForm)
-        if ($this->cachedDevices !== null) {
-            return $this->cachedDevices;
-        }
-
-        // Prüfe ob überhaupt Geräte gefunden wurden
-        try {
-            $deviceCountID = @$this->GetIDForIdent('DeviceCount');
-            if ($deviceCountID === false) {
-                return []; // Variable existiert noch nicht
-            }
-            $deviceCount = GetValue($deviceCountID);
-            if ($deviceCount == 0) {
-                return [];
-            }
-        } catch (Exception $e) {
-            return [];
-        }
-
-        // API-Aufruf nur wenn nicht gecacht
-        try {
-            $client = $this->getClient();
-            $devices = $client->getDevices();
-
-            // Falls noch keine Geräte gefunden wurden
-            if (empty($devices)) {
-                return [];
-            }
-
-            $configuratorDevices = [];
-            foreach ($devices as $deviceId => $device) {
-                // SydpowerClient gibt device_id und device_name zurück
-                $cleanDeviceId = str_replace(':', '', $device['device_id'] ?? $deviceId);
-                $deviceName = $device['device_name'] ?? $device['deviceName'] ?? 'Unbekanntes Gerät';
-
-                // Prüfen ob bereits eine Instanz für dieses Gerät existiert
-                $instanceID = $this->findExistingInstance($cleanDeviceId);
-
-                $configuratorDevices[] = [
-                    "name" => $deviceName,
-                    "deviceId" => $cleanDeviceId,
-                    "instanceID" => $instanceID,
-                    "create" => [
-                        "moduleID" => "{58C595CB-5ABE-95CA-C1BC-26C5DBA45460}", // FossibotDevice GUID
-                        "configuration" => [
-                            "DeviceID" => $cleanDeviceId
-                        ],
-                        "name" => $deviceName
-                    ]
-                ];
-            }
-
-            // Cache für nachfolgende GetConfigurationForm-Aufrufe
-            $this->cachedDevices = $configuratorDevices;
-
             return $configuratorDevices;
 
         } catch (Exception $e) {
@@ -310,6 +142,7 @@ class FossibotDiscovery extends IPSModuleStrict
             return [];
         }
     }
+
 
     /**
      * Prüfen ob bereits eine Instanz für ein Gerät existiert
@@ -366,9 +199,6 @@ class FossibotDiscovery extends IPSModuleStrict
      */
     public function FBD_DiscoverDevices(): bool
     {
-        // Cache leeren für neue Suche
-        $this->cachedDevices = null;
-
         try {
             $client = $this->getClient();
 
@@ -398,34 +228,9 @@ class FossibotDiscovery extends IPSModuleStrict
                 $this->LogMessage(sprintf('📱 Gerät %d: %s', $i+1, $deviceName), KL_NOTIFY);
                 $this->LogMessage(sprintf('🔑 Geräte-ID: %s', $deviceId), KL_NOTIFY);
             }
-
-            // Geräte-Cache für Configurator aufbauen und speichern
-            $configuratorDevices = [];
-            foreach ($devices as $deviceId => $device) {
-                $cleanDeviceId = str_replace(':', '', $device['device_id'] ?? $deviceId);
-                $deviceName = $device['device_name'] ?? 'Unbekanntes Gerät';
-                
-                $instanceID = $this->findExistingInstance($cleanDeviceId);
-                
-                $configuratorDevices[] = [
-                    "name" => $deviceName,
-                    "deviceId" => $cleanDeviceId,
-                    "instanceID" => $instanceID,
-                    "create" => [
-                        "moduleID" => "{58C595CB-5ABE-95CA-C1BC-26C5DBA45460}",
-                        "configuration" => [
-                            "DeviceID" => $cleanDeviceId
-                        ],
-                        "name" => $deviceName
-                    ]
-                ];
-            }
             
             $this->SetValue('DeviceCount', count($deviceIds));
             $this->SetValue('LastDiscovery', date('d.m.Y H:i:s'));
-            
-            // Cache speichern mit der zentralen Funktion
-            $this->saveDeviceCache($configuratorDevices);
 
             return true;
 
@@ -462,12 +267,6 @@ class FossibotDiscovery extends IPSModuleStrict
             IPS_ApplyChanges($instanceID);
 
             $this->LogMessage('Instanz erstellt für: ' . $deviceName . ' (ID: ' . $instanceID . ')', KL_NOTIFY);
-            
-            // Kurz warten damit die Instanz vollständig initialisiert ist
-            usleep(100000); // 100ms
-            
-            // Cache aktualisieren: instanceID für dieses Gerät setzen
-            $this->updateCachedDeviceInstance($deviceId, $instanceID);
             
             return $instanceID;
         }
