@@ -46,10 +46,10 @@ class FossibotDiscovery extends IPSModuleStrict
         $discoveredDevices = [];
         
         try {
-            $foundDevicesID = @$this->GetIDForIdent('FoundDevices');
-            if ($foundDevicesID !== false) {
-                $foundDevicesCount = GetValue($foundDevicesID);
-                if ($foundDevicesCount > 0) {
+            $deviceCountID = @$this->GetIDForIdent('DeviceCount');
+            if ($deviceCountID !== false) {
+                $deviceCount = GetValue($deviceCountID);
+                if ($deviceCount > 0) {
                     // Geräte wurden gefunden, lade sie direkt ohne doppelte Prüfung
                     $discoveredDevices = $this->buildConfiguratorDevices();
                 }
@@ -155,12 +155,12 @@ class FossibotDiscovery extends IPSModuleStrict
         
         // Prüfe ob überhaupt Geräte gefunden wurden
         try {
-            $foundDevicesID = @$this->GetIDForIdent('FoundDevices');
-            if ($foundDevicesID === false) {
+            $deviceCountID = @$this->GetIDForIdent('DeviceCount');
+            if ($deviceCountID === false) {
                 return []; // Variable existiert noch nicht
             }
-            $foundDevicesCount = GetValue($foundDevicesID);
-            if ($foundDevicesCount == 0) {
+            $deviceCount = GetValue($deviceCountID);
+            if ($deviceCount == 0) {
                 return [];
             }
         } catch (Exception $e) {
